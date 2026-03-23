@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Astra Radio – Zkus naši appku!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --accent:#00E5FF;--accent-soft:rgba(0,229,255,.2);--accent-glow:rgba(0,229,255,.35);
+  --teal:#45a29e;--bg:#0B1014;--surface:rgba(15,26,32,.75);
+  --border:rgba(0,229,255,.18);--text:#fff;--muted:#cfeff0;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+html,body{width:100%;height:100%;font-family:var(--font);background:#000;overflow:hidden;color:var(--text)}
+
+/* ===== FULL-SCREEN AD WRAPPER ===== */
+.ad-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.85);z-index:9999}
+
+/* ===== CLOSE BTN ===== */
+.close-btn{
+  position:absolute;top:max(8px,env(safe-area-inset-top,8px));right:12px;z-index:200;
+  width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);
+  font-size:14px;font-weight:600;display:grid;place-items:center;cursor:pointer;
+  backdrop-filter:blur(8px);transition:all .2s;
+}
+.close-btn:hover{background:rgba(255,255,255,.15);color:#fff}
+
+/* ===== PHONE FRAME ===== */
+.phone{
+  position:relative;width:320px;height:640px;max-width:calc(100vw - 24px);max-height:calc(100vh - 80px);
+  border-radius:36px;background:#0a0f14;
+  border:3px solid rgba(60,70,80,.6);
+  box-shadow:0 0 0 1px rgba(0,0,0,.8),0 0 50px rgba(0,229,255,.08),0 30px 80px rgba(0,0,0,.6);
+  overflow:hidden;
+}
+.phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:100px;height:24px;background:#0a0f14;border-radius:0 0 16px 16px;z-index:100}
+.phone-notch::after{content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);width:40px;height:4px;border-radius:4px;background:rgba(255,255,255,.08)}
+
+/* ===== APP SCREEN ===== */
+.app-screen{
+  position:absolute;inset:0;overflow:hidden;
+  background:linear-gradient(165deg,#0d1926 0%,#0B1014 35%,#071018 100%);
+  display:flex;flex-direction:column;
+}
+
+/* Starfield bg */
+.starfield{position:absolute;inset:0;pointer-events:none;z-index:0}
+.star{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle,rgba(207,254,249,1) 0%,rgba(0,229,255,.4) 60%,transparent 100%);
+  animation:twinkle var(--dur,3s) ease-in-out infinite alternate;animation-delay:var(--delay,0s);
+}
+@keyframes twinkle{0%{opacity:.2;transform:scale(.8)}100%{opacity:1;transform:scale(1.1)}}
+
+/* Orbs */
+.orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;animation:orbF 8s ease-in-out infinite alternate}
+.orb-1{width:240px;height:240px;background:rgba(0,63,98,.5);top:-80px;right:-60px}
+.orb-2{width:280px;height:280px;background:rgba(0,63,98,.4);bottom:-100px;left:-80px;animation-delay:-4s}
+@keyframes orbF{0%{transform:translate(0,0) scale(1)}100%{transform:translate(12px,-16px) scale(1.08)}}
+
+/* ===== TOP BAR (Header) ===== */
+.top-bar{
+  position:relative;z-index:10;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:32px 18px 10px;
+}
+.brand-text{font-size:14px;font-weight:800;letter-spacing:2px;color:var(--accent);text-transform:uppercase}
+.tagline{font-size:9px;font-weight:500;color:var(--muted);letter-spacing:1px;margin-top:1px}
+.points-badge{
+  display:flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:12px;
+  background:rgba(0,229,255,.06);border:1px solid var(--border);
+  font-size:10px;font-weight:700;color:var(--accent);
+}
+.points-badge .star-icon{font-size:12px}
+
+/* ===== MAIN PLAYER AREA ===== */
+.player-area{
+  position:relative;z-index:10;flex:1;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:0 20px;gap:0;
+}
+
+/* Now Playing Card */
+.now-playing-card{
+  width:100%;padding:18px;border-radius:18px;
+  background:rgba(15,26,32,.5);border:1px solid var(--border);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  display:flex;flex-direction:column;align-items:flex-start;
+  gap:14px;
+}
+
+/* Artwork + info */
+.song-row{display:flex;align-items:center;gap:14px;width:100%}
+.artwork-box{
+  width:72px;height:72px;flex-shrink:0;border-radius:14px;
+  background:linear-gradient(135deg,#0d1926,rgba(0,229,255,.06));
+  border:1px solid var(--border);display:grid;place-items:center;
+  position:relative;overflow:hidden;
+  box-shadow:0 0 20px rgba(0,229,255,.08);
+}
+.artwork-box .eq-visual{
+  display:flex;gap:2.5px;align-items:flex-end;height:32px;
+}
+.artwork-box .eq-bar{
+  width:3.5px;border-radius:2px;background:var(--accent);
+  transform-origin:bottom;opacity:.25;
+}
+.artwork-box.playing .eq-bar{
+  opacity:.9;animation:eqB .55s ease-in-out infinite alternate;
+}
+.eq-bar:nth-child(1){height:10px;animation-delay:0s}
+.eq-bar:nth-child(2){height:22px;animation-delay:.07s}
+.eq-bar:nth-child(3){height:14px;animation-delay:.14s}
+.eq-bar:nth-child(4){height:26px;animation-delay:.21s}
+.eq-bar:nth-child(5){height:16px;animation-delay:.1s}
+.eq-bar:nth-child(6){height:20px;animation-delay:.18s}
+.eq-bar:nth-child(7){height:8px;animation-delay:.03s}
+@keyframes eqB{0%{transform:scaleY(.3)}100%{transform:scaleY(1)}}
+
+.song-info{flex:1;min-width:0}
+.song-title{font-size:15px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.song-artist{font-size:12px;font-weight:500;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.live-badge{
+  display:inline-flex;align-items:center;gap:4px;margin-top:6px;
+  padding:3px 8px;border-radius:999px;
+  background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.25);
+  font-size:9px;font-weight:800;letter-spacing:1px;color:#9ff;text-transform:uppercase;
+}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.6)}}
+
+/* Controls */
+.controls-row{display:flex;align-items:center;gap:12px;width:100%}
+.play-btn{
+  width:52px;height:52px;border-radius:50%;border:none;cursor:pointer;flex-shrink:0;
+  background:rgba(15,26,32,.9);color:var(--accent);
+  box-shadow:inset 0 0 0 2.5px rgba(0,229,255,.9),0 0 24px var(--accent-soft);
+  display:grid;place-items:center;transition:all .2s;
+}
+.play-btn.is-playing{background:var(--accent);color:#0B1014;box-shadow:0 0 30px var(--accent-glow)}
+.play-btn svg{width:22px;height:22px;fill:currentColor}
+
+.vol-group{display:flex;align-items:center;gap:8px;flex:1}
+.vol-group svg{width:16px;height:16px;fill:var(--muted);flex-shrink:0;cursor:pointer;opacity:.8;transition:all .2s}
+.vol-group svg:hover{fill:var(--accent);opacity:1}
+.vol-slider{
+  -webkit-appearance:none;appearance:none;width:100%;height:6px;
+  border-radius:999px;background:rgba(15,26,32,.9);
+  border:1px solid var(--border);cursor:pointer;
+}
+.vol-slider::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 10px var(--accent-soft);
+  margin-top:-4px;transition:transform .12s;
+}
+.vol-slider:hover::-webkit-slider-thumb{transform:scale(1.1)}
+.vol-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;border:none;background:var(--accent);cursor:pointer}
+.player-status{
+  font-size:10px;color:var(--muted);letter-spacing:.3px;opacity:.7;text-align:center;
+  width:100%;margin-top:4px;transition:color .3s;min-height:14px;
+}
+.player-status.streaming{color:var(--accent);opacity:1}
+
+/* ===== QUALITY BAR ===== */
+.quality-bar{
+  width:100%;display:flex;gap:6px;margin-top:14px;
+}
+.quality-chip{
+  flex:1;padding:8px 0;border-radius:10px;text-align:center;
+  background:rgba(15,26,32,.7);border:1px solid var(--border);
+  font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--muted);
+  cursor:pointer;transition:all .2s;text-transform:uppercase;
+}
+.quality-chip.active{
+  background:rgba(0,229,255,.1);border-color:rgba(0,229,255,.4);color:var(--accent);
+  box-shadow:0 0 12px rgba(0,229,255,.1);
+}
+.quality-chip:hover{border-color:rgba(0,229,255,.3)}
+
+/* ===== DAB TICKER ===== */
+.ticker-wrap{
+  width:100%;margin-top:14px;overflow:hidden;border-radius:10px;
+  background:rgba(0,229,255,.03);border:1px solid var(--border);padding:6px 0;
+}
+.ticker{display:flex;white-space:nowrap;animation:tickerS 22s linear infinite}
+.ticker span{display:inline-block;padding:0 30px;font-size:10px;font-weight:600;letter-spacing:.5px;color:var(--accent)}
+.ticker .sep{color:rgba(0,229,255,.3);padding:0 4px}
+@keyframes tickerS{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav{
+  position:relative;z-index:10;
+  display:flex;align-items:center;justify-content:space-around;
+  padding:8px 12px 16px;
+  background:rgba(15,26,32,.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-top:1px solid rgba(0,229,255,.08);
+}
+.nav-item{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  padding:6px 12px;border-radius:12px;cursor:pointer;transition:all .2s;
+  color:var(--muted);font-size:9px;font-weight:600;letter-spacing:.3px;
+}
+.nav-item.active{color:var(--accent);background:rgba(64,80,87,.35)}
+.nav-item svg{width:20px;height:20px;fill:currentColor}
+
+/* ===== CTA OVERLAY ===== */
+.cta-overlay{
+  position:absolute;bottom:0;left:0;right:0;z-index:50;
+  padding:0 16px 12px;
+  background:linear-gradient(to top,rgba(11,16,20,.95) 0%,rgba(11,16,20,.7) 60%,transparent 100%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  opacity:0;pointer-events:none;transition:all .4s;
+}
+.cta-overlay.visible{opacity:1;pointer-events:all}
+
+.cta-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:12px 20px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,var(--accent),var(--teal));
+  color:#0B1014;font-family:var(--font);font-size:14px;font-weight:800;
+  letter-spacing:.5px;cursor:pointer;text-decoration:none;
+  box-shadow:0 0 28px var(--accent-soft);transition:all .3s;
+  position:relative;overflow:hidden;
+}
+.cta-btn::before{
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
+  animation:shimmer 3s ease-in-out infinite;
+}
+@keyframes shimmer{0%{left:-100%}100%{left:200%}}
+.cta-btn:hover{transform:scale(1.03);box-shadow:0 0 40px var(--accent-glow)}
+.cta-btn svg{width:16px;height:16px;fill:#0B1014;flex-shrink:0}
+
+.store-row{display:flex;gap:8px}
+.store-link{
+  display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  color:var(--text);font-size:9px;font-weight:700;cursor:pointer;text-decoration:none;transition:all .2s;
+}
+.store-link:hover{background:rgba(255,255,255,.12);border-color:rgba(0,229,255,.3);transform:translateY(-1px)}
+.store-link svg{width:14px;height:14px;fill:var(--text)}
+
+/* ===== FINGER HINT ===== */
+.finger-hint{
+  position:absolute;z-index:60;pointer-events:none;
+  font-size:36px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.5));
+  animation:fingerTap 2.5s ease-in-out infinite;
+  opacity:0;
+}
+.finger-hint.show{opacity:1}
+@keyframes fingerTap{
+  0%{transform:translate(0,0) scale(1);opacity:.8}
+  20%{transform:translate(0,4px) scale(.92);opacity:1}
+  40%{transform:translate(0,0) scale(1);opacity:.8}
+  100%{opacity:0}
+}
+
+/* ===== RESPONSIVE ===== */
+@media(max-height:580px){
+  .phone{width:280px;height:calc(100vh - 60px);border-radius:28px}
+  .phone-notch{width:80px;height:20px}
+  .top-bar{padding:26px 14px 6px}
+  .now-playing-card{padding:12px}
+  .artwork-box{width:56px;height:56px;border-radius:10px}
+  .song-title{font-size:13px}
+  .play-btn{width:44px;height:44px}
+  .play-btn svg{width:18px;height:18px}
+  .quality-bar{margin-top:8px}
+  .ticker-wrap{margin-top:8px}
+  .bottom-nav{padding:6px 8px 10px}
+}
+@media(min-width:500px){
+  .phone{width:360px;height:700px}
+}
+
+/* Reduced motion */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<audio id="stream" preload="none"></audio>
+
+<div class="ad-wrap" id="adWrap">
+
+  <!-- Close -->
+  <button class="close-btn" id="closeBtn" aria-label="Zavřít">✕</button>
+
+  <!-- Phone Frame -->
+  <div class="phone">
+    <div class="phone-notch"></div>
+
+    <div class="app-screen">
+      <!-- BG layers -->
+      <div class="orb orb-1" aria-hidden="true"></div>
+      <div class="orb orb-2" aria-hidden="true"></div>
+      <div class="starfield" id="starfield" aria-hidden="true"></div>
+
+      <!-- Top Bar -->
+      <div class="top-bar">
+        <div>
+          <div class="brand-text">ASTRA RADIO</div>
+          <div class="tagline">Na druhé straně vlny</div>
+        </div>
+        <div class="points-badge">
+          <span class="star-icon">⭐</span>
+          <span id="pointsCount">0</span>
+        </div>
+      </div>
+
+      <!-- Player -->
+      <div class="player-area">
+
+        <div class="now-playing-card">
+          <div class="song-row">
+            <div class="artwork-box" id="artworkBox">
+              <div class="eq-visual">
+                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+              </div>
+            </div>
+            <div class="song-info">
+              <div class="song-title" id="songTitle">Astra Radio</div>
+              <div class="song-artist" id="songArtist">Klikni ▶ pro spuštění</div>
+              <div class="live-badge">
+                <span class="live-dot"></span>
+                <span>ŽIVĚ</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="controls-row">
+            <button class="play-btn" id="playBtn" aria-label="Přehrát">
+              <svg id="iconPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              <svg id="iconPause" viewBox="0 0 24 24" style="display:none"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+            </button>
+            <div class="vol-group">
+              <svg id="volIcon" viewBox="0 0 24 24"><path id="volPath" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0012 8.5v1.5a3 3 0 010 4.5v1.5a4.5 4.5 0 004.5-4.5zM12 3.23v1.5a6.5 6.5 0 010 14.54v1.5A8 8 0 0020 12 8 8 0 0012 3.23z"/></svg>
+              <input type="range" class="vol-slider" id="volSlider" min="0" max="100" value="75" aria-label="Hlasitost"
+                style="background:linear-gradient(to right,var(--accent) 75%,rgba(15,26,32,.9) 75%)">
+            </div>
+          </div>
+          <div class="player-status" id="playerStatus">Klikněte ▶ pro spuštění živého vysílání</div>
+        </div>
+
+        <!-- Quality chips -->
+        <div class="quality-bar" id="qualityBar">
+          <div class="quality-chip active" data-url="https://astra.icecast.cz/320" data-label="MP3 320kbps">MP3 320</div>
+          <div class="quality-chip" data-url="https://astra.icecast.cz/1" data-label="AAC 128kbps">AAC 128</div>
+          <div class="quality-chip" data-url="https://astra.icecast.cz/mobile" data-label="AAC+ 64kbps">AAC+ 64</div>
+        </div>
+
+        <!-- Ticker -->
+        <div class="ticker-wrap">
+          <div class="ticker">
+            <span>📡 DAB+ v Praze, Ostravě, Brně, Plzni a dalších městech</span>
+            <span class="sep">✦</span>
+            <span>Astra Radio – Na druhé straně vlny</span>
+            <span class="sep">✦</span>
+            <span>📡 DAB+ v Praze, Ostravě, Brně, Plzni a dalších městech</span>
+            <span class="sep">✦</span>
+            <span>Astra Radio – Na druhé straně vlny</span>
+            <span class="sep">✦</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Nav -->
+      <div class="bottom-nav">
+        <div class="nav-item active">
+          <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg>
+          <span>Přehrávač</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+          <span>Novinky</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z"/></svg>
+          <span>Playlist</span>
+        </div>
+        <div class="nav-item">
+          <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+          <span>Menu</span>
+        </div>
+      </div>
+
+      <!-- CTA overlay (slides up after playing) -->
+      <div class="cta-overlay" id="ctaOverlay">
+        <a href="https://astraradio.cz" class="cta-btn" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
+          Stáhni Astra Radio zdarma
+        </a>
+        <div class="store-row">
+          <a href="https://apps.apple.com" class="store-link" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24"><path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.1 22C7.79 22.05 6.8 20.68 5.96 19.47C4.25 16.56 2.93 11.3 4.7 7.72C5.57 5.94 7.36 4.86 9.28 4.84C10.56 4.81 11.78 5.72 12.56 5.72C13.34 5.72 14.83 4.62 16.41 4.8C17.07 4.83 18.9 5.09 20.06 6.81C19.94 6.89 17.53 8.29 17.56 11.11C17.59 14.46 20.56 15.58 20.59 15.59C20.56 15.66 20.12 17.22 18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z"/></svg>
+            App Store
+          </a>
+          <a href="https://play.google.com" class="store-link" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.61 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
+            Google Play
+          </a>
+        </div>
+      </div>
+
+      <!-- Finger hint -->
+      <div class="finger-hint show" id="fingerHint" style="bottom:260px;left:calc(50% - 85px)">👆</div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ===== Stars =====
+  var field = document.getElementById('starfield');
+  for(var i=0;i<45;i++){
+    var s=document.createElement('div');s.className='star';
+    var sz=1+Math.random()*2.5;
+    s.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;--dur:'+(2+Math.random()*4)+'s;--delay:'+(Math.random()*3)+'s';
+    field.appendChild(s);
+  }
+
+  // ===== Elements =====
+  var audio=document.getElementById('stream');
+  var playBtn=document.getElementById('playBtn');
+  var iconPlay=document.getElementById('iconPlay');
+  var iconPause=document.getElementById('iconPause');
+  var artworkBox=document.getElementById('artworkBox');
+  var status=document.getElementById('playerStatus');
+  var volSlider=document.getElementById('volSlider');
+  var volIcon=document.getElementById('volIcon');
+  var volPath=document.getElementById('volPath');
+  var qualityBar=document.getElementById('qualityBar');
+  var chips=qualityBar.querySelectorAll('.quality-chip');
+  var songTitle=document.getElementById('songTitle');
+  var songArtist=document.getElementById('songArtist');
+  var ctaOverlay=document.getElementById('ctaOverlay');
+  var fingerHint=document.getElementById('fingerHint');
+  var pointsEl=document.getElementById('pointsCount');
+
+  var isPlaying=false;
+  var currentUrl='https://astra.icecast.cz/320';
+  var points=0;
+  var ctaShown=false;
+  var pointsInterval=null;
+  var metaInterval=null;
+
+  // Volume
+  audio.volume=0.75;
+  volSlider.addEventListener('input',function(){
+    var v=this.value/100;
+    audio.volume=v;
+    this.style.background='linear-gradient(to right,var(--accent) '+this.value+'%,rgba(15,26,32,.9) '+this.value+'%)';
+    volPath.setAttribute('d',v===0
+      ?'M16.5 12A4.5 4.5 0 0012 7.5v1.5a3 3 0 010 6v1.5a4.5 4.5 0 004.5-4.5zM3 9v6h4l5 5V4L7 9H3zm16.07 1.93l-1.41 1.41A2.97 2.97 0 0118 12c0-.72-.26-1.38-.68-1.9l1.41-1.41c.72.86 1.17 1.96 1.17 3.17 0 1.53-.63 2.92-1.65 3.93l1.41 1.41A6.96 6.96 0 0021 12c0-1.88-.75-3.58-1.97-4.83z'
+      :'M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0012 8.5v1.5a3 3 0 010 4.5v1.5a4.5 4.5 0 004.5-4.5zM12 3.23v1.5a6.5 6.5 0 010 14.54v1.5A8 8 0 0020 12 8 8 0 0012 3.23z'
+    );
+  });
+
+  // Mute toggle
+  volIcon.addEventListener('click',function(){
+    if(audio.volume>0){audio.volume=0;volSlider.value=0}
+    else{audio.volume=0.75;volSlider.value=75}
+    volSlider.dispatchEvent(new Event('input'));
+  });
+
+  // Play / Pause
+  function play(){
+    audio.src=currentUrl+'?t='+Date.now();
+    audio.load();
+    audio.play().then(function(){
+      isPlaying=true;
+      playBtn.classList.add('is-playing');
+      artworkBox.classList.add('playing');
+      iconPlay.style.display='none';
+      iconPause.style.display='block';
+      status.textContent='Vysílání živě';
+      status.classList.add('streaming');
+      fingerHint.classList.remove('show');
+      startPoints();
+      startMeta();
+      // Show CTA after 8 seconds
+      if(!ctaShown){setTimeout(function(){ctaOverlay.classList.add('visible');ctaShown=true},8000)}
+    }).catch(function(){
+      status.textContent='Chyba přehrávání – zkuste znovu';
+    });
+  }
+  function pause(){
+    audio.pause();audio.src='';
+    isPlaying=false;
+    playBtn.classList.remove('is-playing');
+    artworkBox.classList.remove('playing');
+    iconPlay.style.display='block';
+    iconPause.style.display='none';
+    status.textContent='Pozastaveno';
+    status.classList.remove('streaming');
+    stopPoints();
+    stopMeta();
+  }
+
+  playBtn.addEventListener('click',function(){isPlaying?pause():play()});
+
+  // Quality select
+  chips.forEach(function(chip){
+    chip.addEventListener('click',function(){
+      chips.forEach(function(c){c.classList.remove('active')});
+      chip.classList.add('active');
+      currentUrl=chip.getAttribute('data-url');
+      status.textContent=chip.getAttribute('data-label');
+      if(isPlaying){pause();setTimeout(play,300)}
+    });
+  });
+
+  // Points system
+  function startPoints(){
+    pointsInterval=setInterval(function(){
+      points++;pointsEl.textContent=points;
+    },60000); // 1 point per minute
+  }
+  function stopPoints(){clearInterval(pointsInterval)}
+
+  // Metadata from Icecast
+  function fetchMeta(){
+    fetch('https://astra.icecast.cz/status-json.xsl')
+    .then(function(r){return r.json()})
+    .then(function(data){
+      var srcs=data&&data.icestats&&data.icestats.source;
+      if(!srcs)return;
+      var arr=Array.isArray(srcs)?srcs:[srcs];
+      // Find the /320 mount
+      var src=arr.find(function(s){return s&&s.listenurl&&s.listenurl.indexOf('/320')!==-1})||arr[0];
+      if(src&&src.title){
+        var parts=src.title.split(' - ');
+        if(parts.length>=2){songArtist.textContent=parts[0].trim();songTitle.textContent=parts.slice(1).join(' - ').trim()}
+        else{songTitle.textContent=src.title;songArtist.textContent='Astra Radio · LIVE'}
+      }
+    }).catch(function(){});
+  }
+  function startMeta(){fetchMeta();metaInterval=setInterval(fetchMeta,15000)}
+  function stopMeta(){clearInterval(metaInterval)}
+
+  // Close
+  document.getElementById('closeBtn').addEventListener('click',function(){
+    pause();
+    var wrap=document.getElementById('adWrap');
+    wrap.style.transition='opacity .3s,transform .3s';
+    wrap.style.opacity='0';wrap.style.transform='scale(.95)';
+    setTimeout(function(){wrap.style.display='none'},300);
+  });
+})();
+</script>
+</body>
+</html>

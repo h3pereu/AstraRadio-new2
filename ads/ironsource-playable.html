@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Astra Radio</title>
+<style>
+/* ===== EMBEDDED FONTS (Inter from Google, subset) ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --accent:#00E5FF;
+  --accent-glow:rgba(0,229,255,0.35);
+  --accent-soft:rgba(0,229,255,0.2);
+  --bg:#0B1014;
+  --surface:rgba(15,26,32,0.75);
+  --border:rgba(0,229,255,0.18);
+  --text:#FFFFFF;
+  --text-soft:#E6F1F5;
+  --text-muted:#cfeff0;
+  --card-from:#003F62;
+  --card-to:#101820;
+  --font-body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --font-heading:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+}
+html,body{
+  width:100%;height:100%;
+  font-family:var(--font-body);
+  background:var(--bg);
+  overflow:hidden;color:var(--text);
+  -webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ===== FULL-SCREEN APP CONTAINER ===== */
+.app{
+  position:fixed;inset:0;
+  display:flex;flex-direction:column;
+  background:linear-gradient(165deg,#0d1926 0%,#0B1014 35%,#071018 100%);
+  overflow:hidden;
+}
+
+/* ===== BACKGROUND LAYERS ===== */
+.orb{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0;animation:orbFloat 8s ease-in-out infinite alternate}
+.orb-1{width:280px;height:280px;background:rgba(0,63,98,0.6);top:-120px;right:-90px}
+.orb-2{width:320px;height:320px;background:rgba(0,63,98,0.6);bottom:-160px;left:-120px;animation-delay:-4s}
+@keyframes orbFloat{0%{transform:translate(0,0) scale(1)}100%{transform:translate(12px,-16px) scale(1.08)}}
+
+.starfield{position:absolute;inset:0;pointer-events:none;z-index:0}
+.star{
+  position:absolute;border-radius:50%;
+  background:radial-gradient(circle,rgba(207,254,249,1) 0%,rgba(0,229,255,0.4) 60%,transparent 100%);
+  animation:twinkle var(--dur,3s) ease-in-out infinite alternate;animation-delay:var(--delay,0s);
+}
+@keyframes twinkle{0%{opacity:.2;transform:scale(.8)}100%{opacity:1;transform:scale(1.1)}}
+
+/* Constellation (SVG drawn inline) */
+.constellation{position:absolute;z-index:0;opacity:0.6;pointer-events:none}
+
+/* ===== HEADER ===== */
+.header{
+  position:relative;z-index:10;
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:14px 14px 0;
+  margin-top:max(14px, env(safe-area-inset-top, 14px));
+}
+.brand{
+  font-size:24px;font-weight:700;color:var(--text-soft);
+  letter-spacing:0;text-transform:uppercase;
+  font-family:var(--font-heading);
+}
+.tagline{
+  font-size:12px;font-weight:400;color:var(--text-soft);
+  margin-top:4px;font-family:var(--font-body);
+}
+.points-pill{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(0,63,98,0.8);
+  padding:8px 12px;border-radius:999px;
+  margin-top:8px;
+}
+.points-pill svg{width:12px;height:12px;fill:#FFFFFF;flex-shrink:0}
+.points-pill span{font-size:12px;font-weight:400;color:var(--text-soft);font-family:var(--font-body)}
+
+/* ===== MAIN CONTENT AREA ===== */
+.content{
+  position:relative;z-index:10;
+  flex:1;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:space-evenly;
+  max-width:340px;width:100%;
+  align-self:center;
+  padding:10px 0;
+  padding-bottom:max(100px, calc(100px + env(safe-area-inset-bottom, 0px)));
+}
+
+/* ===== LIVE INDICATOR ===== */
+.live-pill{
+  align-self:flex-start;
+  margin-left:0;margin-bottom:4px;
+  padding:4px 10px;border-radius:999px;
+  background:linear-gradient(to bottom, var(--card-from), var(--card-to));
+  z-index:10;
+}
+.live-pill span{
+  font-size:10px;font-weight:600;color:var(--text-soft);
+  text-transform:uppercase;letter-spacing:1px;
+  font-family:'Inter',sans-serif;
+}
+
+/* ===== NOW PLAYING CARD ===== */
+.now-playing-card{
+  width:100%;
+  padding:20px;border-radius:24px;
+  background:linear-gradient(to bottom, rgba(0,63,98,0.6), rgba(16,24,32,0.6));
+  border:1px solid rgba(255,255,255,0.1);
+  display:flex;flex-direction:column;align-items:flex-start;
+  min-height:192px;
+  position:relative;z-index:1;
+}
+
+/* Artwork */
+.artwork-wrap{
+  width:120px;height:120px;border-radius:22px;
+  overflow:hidden;margin-bottom:16px;
+  box-shadow:0 4px 20px rgba(0,229,255,0.25);
+  position:relative;
+  background:linear-gradient(135deg,#0d1926,rgba(0,229,255,0.06));
+}
+.artwork-wrap img{
+  width:100%;height:100%;object-fit:cover;border-radius:16px;
+  display:block;
+}
+/* Fallback EQ visual inside artwork when no image */
+.artwork-eq{
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;gap:3px;
+}
+.artwork-eq .eq-bar{
+  width:4px;border-radius:2px;background:var(--accent);
+  transform-origin:bottom;opacity:.3;
+}
+.artwork-eq.playing .eq-bar{
+  opacity:.9;animation:eqBar .55s ease-in-out infinite alternate;
+}
+.eq-bar:nth-child(1){height:14px;animation-delay:0s}
+.eq-bar:nth-child(2){height:28px;animation-delay:.07s}
+.eq-bar:nth-child(3){height:18px;animation-delay:.14s}
+.eq-bar:nth-child(4){height:32px;animation-delay:.21s}
+.eq-bar:nth-child(5){height:20px;animation-delay:.1s}
+.eq-bar:nth-child(6){height:26px;animation-delay:.18s}
+.eq-bar:nth-child(7){height:10px;animation-delay:.03s}
+@keyframes eqBar{0%{transform:scaleY(.3)}100%{transform:scaleY(1)}}
+
+.track-title{
+  font-size:16px;font-weight:600;color:#FFFFFF;
+  font-family:'Inter',sans-serif;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:100%;text-align:left;
+}
+.track-artist{
+  font-size:10px;font-weight:400;color:var(--text-soft);
+  font-family:'Inter',sans-serif;
+  margin-top:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:100%;text-align:left;
+}
+
+/* ===== PLAY BUTTON + WAVE RING ===== */
+.controls{
+  display:flex;align-items:center;justify-content:center;
+  margin:16px 0;
+}
+.play-wave-wrapper{
+  width:156px;height:156px;
+  position:relative;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* Wave ring */
+.wave-ring{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.wave-bar-track{
+  position:absolute;top:50%;left:50%;
+  background:var(--border);
+}
+.wave-bar-fill{
+  position:absolute;left:0;right:0;bottom:0;
+  background:var(--accent);
+  box-shadow:0 0 6px rgba(0,229,255,0.55);
+  border-radius:inherit;
+  transform-origin:bottom center;
+  animation:waveScale var(--wave-dur, 0.7s) ease-in-out infinite alternate;
+  animation-delay:var(--wave-delay, 0s);
+}
+@keyframes waveScale{0%{transform:scaleY(0)}100%{transform:scaleY(var(--wave-max, 1))}}
+
+/* Play button */
+.play-btn-glow{
+  position:absolute;
+  width:120px;height:120px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(0,229,255,0.25) 0%, transparent 70%);
+  pointer-events:none;
+  z-index:0;
+}
+.play-btn{
+  width:88px;height:88px;border-radius:50%;
+  border:none;cursor:pointer;
+  background:radial-gradient(circle, #00E5FF 0%, #003F62 100%);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:1;
+  transition:transform .15s;
+}
+.play-btn:active{transform:scale(0.95);opacity:0.9}
+.play-btn svg{width:32px;height:36px;fill:#FFFFFF}
+/* Pause icon */
+.pause-icon{
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.pause-bar{
+  width:6px;height:22px;background:#FFFFFF;border-radius:2px;
+}
+
+/* ===== QUALITY SECTION ===== */
+.quality-section{width:100%}
+.quality-label{
+  font-size:11px;font-weight:400;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;
+  margin-bottom:8px;
+  font-family:'Inter',sans-serif;
+  width:309px;margin-left:auto;margin-right:auto;
+}
+.quality-row{
+  display:flex;gap:24px;justify-content:center;
+}
+.quality-card{
+  width:87px;height:64px;
+  border-radius:22px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:transparent;
+  border:1px solid var(--accent);
+  cursor:pointer;
+  transition:all .2s;
+}
+.quality-card.active{
+  background:var(--card-from);
+  border:none;
+}
+.quality-card:active{transform:scale(0.98)}
+.quality-value{
+  font-size:14px;font-weight:400;color:#FFFFFF;
+  font-family:'Inter',sans-serif;
+}
+.quality-unit{
+  font-size:11px;font-weight:400;color:rgba(255,255,255,0.7);
+  text-transform:uppercase;
+  font-family:'Inter',sans-serif;
+}
+.quality-card.active .quality-unit{color:#FFFFFF}
+
+/* ===== AD REWARD BANNER ===== */
+.ad-reward{
+  width:100%;border-radius:16px;overflow:hidden;
+  margin-top:8px;cursor:pointer;
+  transition:all .2s;
+}
+.ad-reward:active{opacity:0.8;transform:scale(0.98)}
+.ad-reward-inner{
+  display:flex;align-items:center;
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid rgba(0,229,255,0.2);
+  background:linear-gradient(to right, rgba(0,229,255,0.12), rgba(0,229,255,0.04));
+}
+.ad-reward-icon{font-size:22px;margin-right:10px;flex-shrink:0}
+.ad-reward-text{flex:1}
+.ad-reward-title{
+  font-size:13px;font-weight:600;color:#FFFFFF;
+  font-family:'Inter',sans-serif;
+}
+.ad-reward-sub{
+  font-size:11px;font-weight:500;color:var(--accent);
+  margin-top:1px;font-family:'Inter',sans-serif;
+}
+.ad-reward-badge{
+  background:rgba(0,229,255,0.15);
+  padding:5px 10px;border-radius:10px;
+  border:1px solid rgba(0,229,255,0.3);
+  font-size:13px;font-weight:700;color:var(--accent);
+  font-family:'Inter',sans-serif;
+  flex-shrink:0;
+}
+
+/* ===== BOTTOM TAB BAR ===== */
+.tab-bar{
+  position:fixed;
+  bottom:max(44px, calc(38px + env(safe-area-inset-bottom, 6px)));
+  left:50%;transform:translateX(-50%);
+  width:302px;height:61px;
+  border-radius:32px;
+  border:1px solid rgba(84,198,240,0.15);
+  background:rgba(15,26,32,0.65);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 18.5px;
+  z-index:100;
+  box-shadow:0 6px 16px rgba(0,0,0,0.4);
+  overflow:hidden;
+}
+/* Glass tint overlay */
+.tab-bar::before{
+  content:'';position:absolute;inset:0;border-radius:32px;
+  background:linear-gradient(135deg, rgba(84,198,240,0.13), rgba(84,198,240,0.05));
+  pointer-events:none;
+}
+/* Active indicator */
+.tab-indicator{
+  position:absolute;
+  width:76px;height:49px;
+  border-radius:160px;
+  background:linear-gradient(135deg, rgba(64,80,87,0.55), rgba(64,80,87,0.25));
+  top:6px;
+  transition:left .3s cubic-bezier(0.34,1.56,0.64,1);
+  z-index:0;
+}
+.tab-item{
+  width:48px;height:61px;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;z-index:1;
+  border-radius:24px;
+  position:relative;
+  transition:all .2s;
+}
+.tab-item:active{transform:scale(0.98)}
+.tab-item svg{width:24px;height:24px;fill:var(--text-muted);transition:fill .2s}
+.tab-item.active svg{fill:var(--accent)}
+
+/* ===== CTA OVERLAY ===== */
+.cta-overlay{
+  position:fixed;bottom:0;left:0;right:0;z-index:200;
+  padding:0 24px calc(max(44px, env(safe-area-inset-bottom, 44px)) + 70px) 24px;
+  background:linear-gradient(to top, rgba(11,16,20,0.97) 0%, rgba(11,16,20,0.8) 55%, transparent 100%);
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  opacity:0;pointer-events:none;
+  transition:all .5s cubic-bezier(0.16,1,0.3,1);
+  transform:translateY(20px);
+}
+.cta-overlay.visible{opacity:1;pointer-events:all;transform:translateY(0)}
+
+.cta-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;max-width:340px;
+  padding:14px 24px;border:none;border-radius:16px;
+  background:linear-gradient(135deg,var(--accent),#45a29e);
+  color:#0B1014;font-family:var(--font-heading);font-size:15px;font-weight:800;
+  letter-spacing:0.5px;cursor:pointer;text-decoration:none;
+  box-shadow:0 0 28px var(--accent-soft);
+  position:relative;overflow:hidden;
+  transition:all .3s;
+}
+.cta-btn::before{
+  content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);
+  animation:shimmer 3s ease-in-out infinite;
+}
+@keyframes shimmer{0%{left:-100%}100%{left:200%}}
+.cta-btn:hover{transform:scale(1.03);box-shadow:0 0 40px var(--accent-glow)}
+.cta-btn svg{width:16px;height:16px;fill:#0B1014;flex-shrink:0}
+
+.store-row{display:flex;gap:10px;margin-top:2px}
+.store-link{
+  display:flex;align-items:center;gap:5px;
+  padding:7px 12px;border-radius:10px;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);
+  color:var(--text);font-size:10px;font-weight:700;
+  cursor:pointer;text-decoration:none;
+  font-family:var(--font-body);
+  transition:all .2s;
+}
+.store-link:hover{background:rgba(255,255,255,0.12);border-color:rgba(0,229,255,0.3);transform:translateY(-1px)}
+.store-link svg{width:14px;height:14px;fill:var(--text)}
+
+/* ===== REDUCED MOTION ===== */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+
+<audio id="stream" preload="none"></audio>
+
+<div class="app" id="app">
+  <!-- BG layers -->
+  <div class="orb orb-1" aria-hidden="true"></div>
+  <div class="orb orb-2" aria-hidden="true"></div>
+  <div class="starfield" id="starfield" aria-hidden="true"></div>
+
+  <!-- Constellation SVG -->
+  <svg class="constellation" id="constellation" viewBox="0 0 1400 600" fill="none" aria-hidden="true">
+    <defs>
+      <radialGradient id="starDot" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#CFFEF9" stop-opacity="1"/>
+        <stop offset="65%" stop-color="#00E5FF" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="#00E5FF" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <g stroke="#00E5FF" stroke-linecap="round" fill="none">
+      <g opacity="0.25" stroke-width="6">
+        <path d="M80 200 L300 180 L520 260 L780 300"/>
+        <path d="M780 300 L1250 280 L1180 520 L860 500 Z"/>
+      </g>
+      <g opacity="0.85" stroke-width="2.2">
+        <path d="M80 200 L300 180 L520 260 L780 300"/>
+        <path d="M780 300 L1250 280 L1180 520 L860 500 Z"/>
+      </g>
+    </g>
+    <g opacity="0.95">
+      <circle cx="80" cy="200" r="10" fill="url(#starDot)"/>
+      <circle cx="300" cy="180" r="10" fill="url(#starDot)"/>
+      <circle cx="520" cy="260" r="10" fill="url(#starDot)"/>
+      <circle cx="780" cy="300" r="11" fill="url(#starDot)"/>
+      <circle cx="1250" cy="280" r="11" fill="url(#starDot)"/>
+      <circle cx="1180" cy="520" r="11" fill="url(#starDot)"/>
+      <circle cx="860" cy="500" r="11" fill="url(#starDot)"/>
+    </g>
+  </svg>
+
+  <!-- HEADER -->
+  <div class="header">
+    <div>
+      <div class="brand">ASTRA RADIO</div>
+      <div class="tagline">Na druhé straně vlny</div>
+    </div>
+    <div class="points-pill">
+      <!-- Star icon SVG matching the app's star-point.png -->
+      <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>
+      <span id="pointsCount">0</span>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="content">
+
+    <!-- Live indicator pill -->
+    <div style="width:100%;flex-shrink:1;display:flex;flex-direction:column;justify-content:center">
+      <div class="live-pill">
+        <span><span style="color:#FFFFFF">• </span><span id="statusLabel">POZASTAVENO</span></span>
+      </div>
+
+      <!-- Now Playing Card -->
+      <div class="now-playing-card">
+        <div class="artwork-wrap" id="artworkWrap">
+          <img id="artworkImg" src="https://icecast.astraradio.cz/nowplaying.jpg" alt="Artwork" onerror="this.style.display='none';document.getElementById('artworkEq').style.display='flex'">
+          <div class="artwork-eq" id="artworkEq" style="display:none;position:absolute;inset:0;background:linear-gradient(135deg,#0d1926,rgba(0,229,255,0.06))">
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+          </div>
+        </div>
+        <div class="track-title" id="songTitle">Astra Radio</div>
+        <div class="track-artist" id="songArtist">Klikni ▶ pro spuštění</div>
+      </div>
+    </div>
+
+    <!-- Controls - Play Button with Wave Ring -->
+    <div class="controls">
+      <div class="play-wave-wrapper">
+        <div class="wave-ring" id="waveRing"></div>
+        <div class="play-btn-glow"></div>
+        <button class="play-btn" id="playBtn" aria-label="Přehrát">
+          <svg id="iconPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <div id="iconPause" class="pause-icon" style="display:none">
+            <div class="pause-bar"></div>
+            <div class="pause-bar"></div>
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quality Section -->
+    <div class="quality-section">
+      <div class="quality-label">Kvalita</div>
+      <div class="quality-row" id="qualityRow">
+        <div class="quality-card" data-url="https://icecast.astraradio.cz/320" data-label="MP3 320 kbps" data-bitrate="320">
+          <span class="quality-value">320</span>
+          <span class="quality-unit">KBPS</span>
+        </div>
+        <div class="quality-card active" data-url="https://icecast.astraradio.cz/128" data-label="AAC 128 kbps" data-bitrate="128">
+          <span class="quality-value">128</span>
+          <span class="quality-unit">KBPS</span>
+        </div>
+        <div class="quality-card" data-url="https://icecast.astraradio.cz/64" data-label="AAC+ 64 kbps" data-bitrate="64">
+          <span class="quality-value">64</span>
+          <span class="quality-unit">KBPS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Watch Ad for Points Banner -->
+    <div class="ad-reward">
+      <div class="ad-reward-inner">
+        <span class="ad-reward-icon">🎬</span>
+        <div class="ad-reward-text">
+          <div class="ad-reward-title">Sleduj reklamu a získej body!</div>
+          <div class="ad-reward-sub">+100 bodů zdarma</div>
+        </div>
+        <div class="ad-reward-badge">+100</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM TAB BAR -->
+  <div class="tab-bar" id="tabBar">
+    <!-- Active indicator -->
+    <div class="tab-indicator" id="tabIndicator" style="left:calc(18.5px + 24px - 38px)"></div>
+
+    <!-- Tab: Přehrávač (Player) - active -->
+    <div class="tab-item active" data-tab="player">
+      <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg>
+    </div>
+    <!-- Tab: Novinky (News) -->
+    <div class="tab-item" data-tab="news">
+      <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+    </div>
+    <!-- Tab: Playlist -->
+    <div class="tab-item" data-tab="playlist">
+      <svg viewBox="0 0 24 24"><path d="M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3z"/></svg>
+    </div>
+    <!-- Tab: Menu -->
+    <div class="tab-item" data-tab="menu">
+      <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+    </div>
+  </div>
+
+  <!-- CTA OVERLAY -->
+  <div class="cta-overlay" id="ctaOverlay">
+    <a href="https://astraradio.cz" class="cta-btn" id="ctaBtn" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z"/></svg>
+      Stáhni Astra Radio zdarma
+    </a>
+    <div class="store-row">
+      <a href="https://apps.apple.com/app/astra-radio" class="store-link" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.1 22C7.79 22.05 6.8 20.68 5.96 19.47C4.25 16.56 2.93 11.3 4.7 7.72C5.57 5.94 7.36 4.86 9.28 4.84C10.56 4.81 11.78 5.72 12.56 5.72C13.34 5.72 14.83 4.62 16.41 4.8C17.07 4.83 18.9 5.09 20.06 6.81C19.94 6.89 17.53 8.29 17.56 11.11C17.59 14.46 20.56 15.58 20.59 15.59C20.56 15.66 20.12 17.22 18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z"/></svg>
+        App Store
+      </a>
+      <a href="https://play.google.com/store/apps/details?id=com.astraradio" class="store-link" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24"><path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.61 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z"/></svg>
+        Google Play
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ===== Stars =====
+  var field = document.getElementById('starfield');
+  for(var i=0;i<55;i++){
+    var s=document.createElement('div');s.className='star';
+    var sz=1+Math.random()*2.5;
+    s.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+Math.random()*100+'%;top:'+Math.random()*100+'%;--dur:'+(2+Math.random()*4)+'s;--delay:'+(Math.random()*3)+'s';
+    field.appendChild(s);
+  }
+
+  // ===== Constellation positioning =====
+  var con = document.getElementById('constellation');
+  var w = window.innerWidth;
+  var cw = Math.min(w * 1.25, 760);
+  var ch = Math.round(cw * 0.43);
+  con.style.width = cw+'px';
+  con.style.height = ch+'px';
+  con.style.left = Math.round((w - cw)/2)+'px';
+  con.style.top = '-2px';
+
+  // ===== Wave ring generation =====
+  var waveRing = document.getElementById('waveRing');
+  var BAR_COUNT = 24;
+  var RING_SIZE = 156;
+  var waveRadius = RING_SIZE/2 - 10;
+
+  function seededRandom(seed){
+    var v = seed % 2147483647;
+    if(v<=0)v+=2147483646;
+    return function(){v=(v*16807)%2147483647;return(v-1)/2147483646};
+  }
+  var seed = Math.floor(Math.random()*1000000);
+
+  for(var i=0;i<BAR_COUNT;i++){
+    var rand = seededRandom(seed * 97 + i + 1);
+    var randomVal = function(min,max){return min+(max-min)*rand()};
+    var jitter = randomVal(-6,6);
+    var progress = i/BAR_COUNT;
+    var angle = progress * 360 + jitter;
+    var baseHeight = Math.round(randomVal(18,44));
+    var thickness = Math.round(randomVal(4,6));
+    var maxScale = randomVal(0.8,1.2);
+    var fillOpacity = randomVal(0.75,1);
+    var delay = Math.round(randomVal(0,120));
+    var duration = Math.round(randomVal(500,900));
+    var offset = randomVal(0.68,0.76);
+    var translateOut = -waveRadius * offset + baseHeight/2;
+
+    var track = document.createElement('div');
+    track.className = 'wave-bar-track';
+    track.style.cssText = 'width:'+thickness+'px;height:'+baseHeight+'px;border-radius:'+thickness+'px;'+
+      'transform:translateX(-'+thickness/2+'px) translateY(-'+baseHeight/2+'px) rotate('+angle+'deg) translateY('+translateOut+'px)';
+
+    var fill = document.createElement('div');
+    fill.className = 'wave-bar-fill';
+    fill.style.cssText = 'height:'+baseHeight+'px;opacity:'+fillOpacity+';border-radius:'+thickness+'px;'+
+      '--wave-dur:'+(duration/1000)+'s;--wave-delay:'+(delay/1000)+'s;--wave-max:'+maxScale;
+
+    track.appendChild(fill);
+    waveRing.appendChild(track);
+  }
+
+  // ===== Elements =====
+  var audio = document.getElementById('stream');
+  var playBtn = document.getElementById('playBtn');
+  var iconPlay = document.getElementById('iconPlay');
+  var iconPause = document.getElementById('iconPause');
+  var statusLabel = document.getElementById('statusLabel');
+  var qualityRow = document.getElementById('qualityRow');
+  var chips = qualityRow.querySelectorAll('.quality-card');
+  var songTitle = document.getElementById('songTitle');
+  var songArtist = document.getElementById('songArtist');
+  var ctaOverlay = document.getElementById('ctaOverlay');
+  var pointsEl = document.getElementById('pointsCount');
+  var waveRingEl = document.getElementById('waveRing');
+  var artworkImg = document.getElementById('artworkImg');
+  var artworkEq = document.getElementById('artworkEq');
+
+  var isPlaying = false;
+  var currentUrl = 'https://icecast.astraradio.cz/128'; // Default: AAC 128 (matching app default)
+  var points = 0;
+  var ctaShown = false;
+  var pointsInterval = null;
+  var metaInterval = null;
+
+  // Volume
+  audio.volume = 0.75;
+
+  // Play / Pause
+  function play(){
+    audio.src = currentUrl + '?t=' + Date.now();
+    audio.load();
+    audio.play().then(function(){
+      isPlaying = true;
+      iconPlay.style.display = 'none';
+      iconPause.style.display = 'flex';
+      statusLabel.textContent = 'PŘEHRÁVÁNÍ';
+      waveRingEl.style.display = 'flex';
+      artworkEq.classList.add('playing');
+      startPoints();
+      startMeta();
+      // Show CTA after 8 seconds
+      if(!ctaShown){setTimeout(function(){ctaOverlay.classList.add('visible');ctaShown=true},8000)}
+    }).catch(function(){
+      statusLabel.textContent = 'CHYBA';
+    });
+  }
+  function pause(){
+    audio.pause();audio.src='';
+    isPlaying = false;
+    iconPlay.style.display = 'block';
+    iconPause.style.display = 'none';
+    statusLabel.textContent = 'POZASTAVENO';
+    waveRingEl.style.display = 'none';
+    artworkEq.classList.remove('playing');
+    stopPoints();
+    stopMeta();
+  }
+
+  playBtn.addEventListener('click',function(){isPlaying?pause():play()});
+
+  // Quality select
+  chips.forEach(function(chip){
+    chip.addEventListener('click',function(){
+      chips.forEach(function(c){c.classList.remove('active')});
+      chip.classList.add('active');
+      currentUrl = chip.getAttribute('data-url');
+      if(isPlaying){pause();setTimeout(play,300)}
+    });
+  });
+
+  // Points system
+  function startPoints(){
+    pointsInterval = setInterval(function(){
+      points++;pointsEl.textContent=points;
+    },60000);
+  }
+  function stopPoints(){clearInterval(pointsInterval)}
+
+  // Metadata from Icecast
+  function fetchMeta(){
+    fetch('https://icecast.astraradio.cz/status-json.xsl')
+    .then(function(r){return r.json()})
+    .then(function(data){
+      var srcs=data&&data.icestats&&data.icestats.source;
+      if(!srcs)return;
+      var arr=Array.isArray(srcs)?srcs:[srcs];
+      var src=arr.find(function(s){return s&&s.listenurl&&s.listenurl.indexOf('/1')!==-1})||arr[0];
+      if(src&&src.title){
+        var parts=src.title.split(' - ');
+        if(parts.length>=2){
+          songArtist.textContent=parts[0].trim();
+          songTitle.textContent=parts.slice(1).join(' - ').trim();
+        } else {
+          songTitle.textContent=src.title;
+          songArtist.textContent='Astra Radio · LIVE';
+        }
+        // Refresh artwork
+        fetchArtwork();
+      }
+    }).catch(function(){});
+  }
+
+  function fetchArtwork() {
+    // Artwork updates automatically via nowplaying.jpg
+    artworkImg.src = 'https://icecast.astraradio.cz/nowplaying.jpg?t=' + Date.now();
+    artworkImg.style.display = 'block';
+    artworkEq.style.display = 'none';
+  }
+
+  function startMeta(){fetchMeta();metaInterval=setInterval(fetchMeta,15000)}
+  function stopMeta(){clearInterval(metaInterval)}
+
+  // Tab bar interactivity (visual only)
+  var tabItems = document.querySelectorAll('.tab-item');
+  var tabIndicator = document.getElementById('tabIndicator');
+  var STEP = 72.33;
+  tabItems.forEach(function(item, index){
+    item.addEventListener('click',function(){
+      tabItems.forEach(function(t){t.classList.remove('active')});
+      item.classList.add('active');
+      tabIndicator.style.left = 'calc(18.5px + 24px - 38px + '+(STEP*index)+'px)';
+    });
+  });
+
+  // IronSource / MRAID integration
+  // Try to detect MRAID for proper close/install handling
+  var mraidReady = false;
+  function initMraid(){
+    if(typeof mraid !== 'undefined'){
+      mraidReady = true;
+      if(mraid.getState() === 'loading'){
+        mraid.addEventListener('ready', onMraidReady);
+      } else {
+        onMraidReady();
+      }
+    }
+  }
+  function onMraidReady(){
+    // MRAID is ready
+  }
+
+  // CTA click handler - use MRAID open if available
+  var ctaBtn = document.getElementById('ctaBtn');
+  ctaBtn.addEventListener('click', function(e){
+    if(mraidReady && typeof mraid !== 'undefined' && mraid.open){
+      e.preventDefault();
+      mraid.open('https://astraradio.cz');
+    }
+    // Otherwise falls through to normal link behavior
+  });
+
+  // Init
+  try { initMraid(); } catch(e){}
+
+  // Wave ring initially hidden
+  waveRingEl.style.display = 'none';
+})();
+</script>
+</body>
+</html>

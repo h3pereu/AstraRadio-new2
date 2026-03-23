@@ -1,30 +1,107 @@
 {
   "expo": {
-    "name": "AstraRadio-new",
-    "slug": "AstraRadio-new",
-    "version": "1.0.0",
-    "orientation": "portrait",
+    "name": "Astra Radio",
+    "slug": "astraradio",
+    "version": "1.0.5",
+    "orientation": "default",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "dark",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#1a1a2e"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "cz.astraradio.radio",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "requireFullScreen": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["audio"],
+        "GADApplicationIdentifier": "ca-app-pub-4420537843593379~6533337185",
+        "SKAdNetworkItems": [
+          { "SKAdNetworkIdentifier": "su67r6k2v3.skadnetwork" },
+          { "SKAdNetworkIdentifier": "yclnxrl5pm.skadnetwork" },
+          { "SKAdNetworkIdentifier": "4468km3ulz.skadnetwork" },
+          { "SKAdNetworkIdentifier": "v72qych5uu.skadnetwork" },
+          { "SKAdNetworkIdentifier": "6xzpu9s2p8.skadnetwork" },
+          { "SKAdNetworkIdentifier": "ludvb6z3bs.skadnetwork" },
+          { "SKAdNetworkIdentifier": "mlmmfzh3r3.skadnetwork" },
+          { "SKAdNetworkIdentifier": "4fzdc2evr5.skadnetwork" },
+          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" },
+          { "SKAdNetworkIdentifier": "7ug5zh24hu.skadnetwork" },
+          { "SKAdNetworkIdentifier": "5l3tpt7t6e.skadnetwork" },
+          { "SKAdNetworkIdentifier": "9nlqeag3gk.skadnetwork" },
+          { "SKAdNetworkIdentifier": "32z4fx6l9h.skadnetwork" },
+          { "SKAdNetworkIdentifier": "3rd42ekr43.skadnetwork" },
+          { "SKAdNetworkIdentifier": "97r2b46745.skadnetwork" },
+          { "SKAdNetworkIdentifier": "wg4vff78zm.skadnetwork" },
+          { "SKAdNetworkIdentifier": "t38b2kh725.skadnetwork" },
+          { "SKAdNetworkIdentifier": "2u9pt9hc89.skadnetwork" },
+          { "SKAdNetworkIdentifier": "8s468mfl3y.skadnetwork" },
+          { "SKAdNetworkIdentifier": "av6w8kgt66.skadnetwork" },
+          { "SKAdNetworkIdentifier": "e5fvkxwrpn.skadnetwork" },
+          { "SKAdNetworkIdentifier": "hs6bdukanm.skadnetwork" },
+          { "SKAdNetworkIdentifier": "kbd757ywx3.skadnetwork" },
+          { "SKAdNetworkIdentifier": "zq492l623r.skadnetwork" },
+          { "SKAdNetworkIdentifier": "578prtvx9j.skadnetwork" },
+          { "SKAdNetworkIdentifier": "prcb7njmu6.skadnetwork" },
+          { "SKAdNetworkIdentifier": "3qy4746246.skadnetwork" },
+          { "SKAdNetworkIdentifier": "44jx6755aq.skadnetwork" },
+          { "SKAdNetworkIdentifier": "22mmun2rn5.skadnetwork" },
+          { "SKAdNetworkIdentifier": "252b5q8x7y.skadnetwork" },
+          { "SKAdNetworkIdentifier": "9t245vhmpl.skadnetwork" },
+          { "SKAdNetworkIdentifier": "a8cz6cu7e5.skadnetwork" },
+          { "SKAdNetworkIdentifier": "wzmmz9fp6w.skadnetwork" },
+          { "SKAdNetworkIdentifier": "qqp299437r.skadnetwork" },
+          { "SKAdNetworkIdentifier": "f38h382jlk.skadnetwork" },
+          { "SKAdNetworkIdentifier": "s39g8k73mm.skadnetwork" },
+          { "SKAdNetworkIdentifier": "k674qkevps.skadnetwork" },
+          { "SKAdNetworkIdentifier": "ppxm28t8ap.skadnetwork" },
+          { "SKAdNetworkIdentifier": "x44k69ngh6.skadnetwork" },
+          { "SKAdNetworkIdentifier": "f7s53z58qe.skadnetwork" },
+          { "SKAdNetworkIdentifier": "kbmxgpxpgc.skadnetwork" },
+          { "SKAdNetworkIdentifier": "7fmhfwg9en.skadnetwork" },
+          { "SKAdNetworkIdentifier": "m8dbw4sv7c.skadnetwork" },
+          { "SKAdNetworkIdentifier": "mqn7fxpca7.skadnetwork" },
+          { "SKAdNetworkIdentifier": "6yxyv74ff7.skadnetwork" },
+          { "SKAdNetworkIdentifier": "424m5254lk.skadnetwork" },
+          { "SKAdNetworkIdentifier": "vhf287vqwu.skadnetwork" },
+          { "SKAdNetworkIdentifier": "cwn433xbcr.skadnetwork" },
+          { "SKAdNetworkIdentifier": "5tjdwbrq8w.skadnetwork" }
+        ],
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
+      }
     },
     "android": {
+      "package": "cz.astraradio.radio",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+        "backgroundColor": "#1a1a2e"
+      }
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    }
+    "extra": {
+      "eas": {
+        "projectId": "c1bf0a80-7e65-41e6-b8da-3d533b72844f"
+      }
+    },
+    "newArchEnabled": true,
+    "plugins": [
+      "expo-font",
+      "./plugins/withTikTokModularHeaders",
+      "./plugins/withAdMob"
+    ]
   }
 }
