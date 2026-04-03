@@ -15,6 +15,7 @@ import { launchTestSuite, validateIntegration } from "./adService";
 import { clearAllData } from "./storage";
 import { deleteAccount } from "./api";
 import { UserData } from "./types";
+import { getActiveBadgeTier, BADGE_TIERS } from "./config";
 
 // Using your colors
 const colors = {
@@ -228,6 +229,11 @@ export default function MenuScreen({
   const totalMins = totalMinutes % 60;
   const isGuest = !userData.hasAccount;
 
+  // Badge progress
+  const activeTier = getActiveBadgeTier(totalMinutes);
+  const nextTier = BADGE_TIERS.find(t => (totalMinutes / 60) < t.hoursRequired) ?? null;
+  const multiplier = activeTier ? activeTier.multiplier : 1.0;
+
   return (
     <View style={styles.container}>
       {/* 1. Transparent Header Area - REMOVED "MENU" TITLE per user request */}
@@ -262,7 +268,35 @@ export default function MenuScreen({
                   {userData?.points ?? 0}
                 </Text>
               </View>
+              <View style={styles.accountStat}>
+                <Text style={styles.accountStatLabel}>Multiplikátor</Text>
+                <Text style={styles.accountStatValue}>{multiplier.toFixed(2)}×</Text>
+              </View>
             </View>
+
+            {/* Badge row */}
+            {activeTier ? (
+              <View style={styles.badgeRow}>
+                <Text style={styles.badgeIcon}>{activeTier.icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.badgeTitle}>{activeTier.title}</Text>
+                  {nextTier ? (
+                    <Text style={styles.badgeNext}>
+                      Další odznak za {Math.ceil(nextTier.hoursRequired - totalMinutes / 60)}h poslechu
+                    </Text>
+                  ) : (
+                    <Text style={styles.badgeNext}>Maximální úroveň! 🏆</Text>
+                  )}
+                </View>
+              </View>
+            ) : nextTier ? (
+              <View style={styles.badgeRow}>
+                <Text style={styles.badgeIcon}>🎵</Text>
+                <Text style={styles.badgeNext}>
+                  První odznak za {Math.ceil(nextTier.hoursRequired - totalMinutes / 60)}h poslechu
+                </Text>
+              </View>
+            ) : null}
 
             {isGuest && (
               <Pressable
@@ -474,6 +508,31 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     marginTop: 2,
+  },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    backgroundColor: "rgba(0, 229, 255, 0.06)",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "rgba(0, 229, 255, 0.12)",
+  },
+  badgeIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  badgeTitle: {
+    color: colors.accent,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  badgeNext: {
+    color: colors.textMuted,
+    fontSize: 11,
+    marginTop: 1,
   },
   accountCta: {
     marginTop: 16,

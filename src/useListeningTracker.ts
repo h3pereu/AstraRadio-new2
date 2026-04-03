@@ -8,7 +8,12 @@ import {
   addDailyListeningMinutes,
   checkAndAwardDailyBonus,
 } from "./storage";
-import { POINTS_PER_MINUTE } from "./config";
+import {
+  POINTS_PER_MINUTE,
+  BADGE_TIERS,
+  getActiveBadgeTier,
+  getPointMultiplier,
+} from "./config";
 import { updateAdTimer, shouldShowAd, showInterstitial } from "./adService";
 import { maybeRequestReview } from "./reviewPrompt";
 
@@ -60,18 +65,45 @@ export default function useListeningTracker(
         const minutesElapsed = elapsed / (60 * 1000);
 
         if (minutesElapsed >= 1) {
+          // Apply badge multiplier to base rate, rounded to nearest integer
+          const currentUser = await getUserData();
+          const totalMinutes = currentUser?.totalListeningMinutes ?? (userData?.totalListeningMinutes ?? 0);
+          const multiplier = getPointMultiplier(totalMinutes);
+          const pointsToAward = Math.round(POINTS_PER_MINUTE * multiplier);
+
           console.log(
-            "[useListeningTracker] Awarding points:",
-            POINTS_PER_MINUTE,
+            `[useListeningTracker] Awarding ${pointsToAward} points (${POINTS_PER_MINUTE} × ${multiplier}x multiplier)`,
           );
 
           try {
             // Add points to storage
-            const updatedUser = await addPoints(POINTS_PER_MINUTE);
+            const updatedUser = await addPoints(pointsToAward);
 
             if (updatedUser) {
               // Also track daily listening minutes for daily bonus
               await addDailyListeningMinutes(1);
+
+              // ── Badge unlock check ──────────────────────────────────────
+              const prevEarned = updatedUser.earnedBadgeIds ?? [];
+              const activeTier = getActiveBadgeTier(updatedUser.totalListeningMinutes);
+              if (activeTier && !prevEarned.includes(activeTier.id)) {
+                // New badge unlocked — persist it and update multiplier
+                const newEarned = [...prevEarned, activeTier.id];
+                // Collect ALL tiers now unlocked (in case of first-run catch-up)
+                const allUnlocked = BADGE_TIERS
+                  .filter(t => (updatedUser.totalListeningMinutes / 60) >= t.hoursRequired)
+                  .map(t => t.id);
+                updatedUser.earnedBadgeIds = allUnlocked;
+                updatedUser.currentMultiplier = activeTier.multiplier;
+                await import('./storage').then(({ saveUserData }) => saveUserData(updatedUser));
+                console.log(`[useListeningTracker] Badge unlocked: ${activeTier.title} (${activeTier.multiplier}x)`);
+                Alert.alert(
+                  `${activeTier.icon} Nový odznak!`,
+                  `Odemkl jsi odznak „${activeTier.title}"!\nTvůj multiplikátor bodů je nyní ${activeTier.multiplier}×.`,
+                  [{ text: 'Super! 🎉' }],
+                );
+              }
+              // ────────────────────────────────────────────────────────────
 
               // Check if daily bonus should be awarded (60+ minutes today)
               if (!dailyBonusAwarded) {
@@ -82,29 +114,25 @@ export default function useListeningTracker(
                   );
                   setDailyBonusAwarded(true);
 
-                  // Show notification to user
                   Alert.alert(
                     "🎉 Denní bonus!",
                     "Gratulujeme! Poslechl jsi dnes hodinu a získáváš 50 bonusových bodů!",
                     [{ text: "Super!" }],
                   );
 
-                  // Refresh user data to include bonus points
                   const latestUser = await getUserData();
                   if (latestUser) {
                     onUserDataChangeRef.current(latestUser);
                   }
                 } else {
-                  // Update parent component with new user data (without bonus)
                   onUserDataChangeRef.current(updatedUser);
                 }
               } else {
-                // Update parent component with new user data
                 onUserDataChangeRef.current(updatedUser);
               }
 
-              // Update session points
-              setSessionPoints((prev) => prev + POINTS_PER_MINUTE);
+              // Update session points with multiplied value
+              setSessionPoints((prev) => prev + pointsToAward);
 
               // Check if we should show review prompt (every 10 min check)
               const userMinutes = updatedUser.totalListeningMinutes || 0;

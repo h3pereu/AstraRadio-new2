@@ -13,6 +13,9 @@ export interface UserData {
   lastDailyBonusDate?: string; // YYYY-MM-DD format - last day bonus was awarded
   dailyListeningMinutes?: number; // Today's listening minutes
   dailyListeningDate?: string; // YYYY-MM-DD format - date for dailyListeningMinutes
+  // Badge / multiplier system
+  earnedBadgeIds?: string[]; // IDs of all unlocked badges (from BADGE_TIERS)
+  currentMultiplier?: number; // Active point multiplier (1.0 – 1.8)
 }
 
 export interface RewardItem {

@@ -112,13 +112,21 @@ const JINGLE_TITLE_LOWER = JINGLE_TITLE.toLowerCase();
 const isJingleTitle = (title?: string) =>
   title?.trim().toLowerCase() === JINGLE_TITLE_LOWER;
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 390; // iPhone 13/14 base
 const globalScale = (size: number) => {
   const scale = SCREEN_WIDTH / BASE_WIDTH;
   const newSize = size * scale;
   return Math.round(PixelRatio.roundToNearestPixel(newSize));
 };
+
+// ─── Tablet detection ─────────────────────────────────────────────────────────
+// A device is treated as a tablet when its shortest side is ≥ 600 dp.
+// This matches Android's "sw600dp" tablet qualifier used in Material Design.
+const TABLET_BREAKPOINT = 600;
+const isTabletDevice = () => Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) >= TABLET_BREAKPOINT;
+// Maximum content width on tablets — keeps text and cards comfortable to read.
+const TABLET_MAX_CONTENT_WIDTH = 680;
 
 type TabKey = "player" | "news" | "playlist" | "menu";
 
@@ -447,6 +455,7 @@ function App({
   const [tabBarHeight, setTabBarHeight] = useState(0);
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const isTablet = Math.min(width, height) >= TABLET_BREAKPOINT;
   const { playing } = useIsPlaying();
 
   // Use listening tracker to earn points
@@ -513,6 +522,7 @@ function App({
                 style={[
                   styles.contentWrapper,
                   isLandscape ? styles.contentWrapperLandscape : null,
+                  isTablet ? styles.contentWrapperTablet : null,
                 ]}
               >
                 {activeTab === "player" && !isLandscape ? (
@@ -609,6 +619,7 @@ function App({
                   activeTab={activeTab}
                   onChange={setActiveTab}
                   onHeightChange={setTabBarHeight}
+                  isTablet={isTablet}
                 />
               )}
             </View>
@@ -721,10 +732,12 @@ function BottomTabs({
   activeTab,
   onChange,
   onHeightChange,
+  isTablet = false,
 }: {
   activeTab: TabKey;
   onChange: (tab: TabKey) => void;
   onHeightChange?: (height: number) => void;
+  isTablet?: boolean;
 }) {
   const indicatorAnim = useRef(new Animated.Value(0)).current;
 
@@ -760,7 +773,7 @@ function BottomTabs({
 
   return (
     <BlurView
-      style={styles.tabBar}
+      style={[styles.tabBar, isTablet ? styles.tabBarTablet : null]}
       intensity={80}
       tint="dark"
       onLayout={
@@ -804,6 +817,7 @@ function BottomTabs({
             onPress={() => handleTabPress(tab.key)}
             style={({ pressed }) => [
               styles.tabItem,
+              isTablet ? styles.tabItemTablet : null,
               pressed ? styles.tabItemPressed : null,
             ]}
           >
@@ -1867,9 +1881,9 @@ function PlayerScreen({
         // Set default quality to 128 kbps (index 1)
         await TrackPlayer.skip(1);
 
-        // Initialize Unity LevelPlay ads
+        // Initialize Unity LevelPlay ads with the real user ID for accurate tracking
         const { initializeAds } = await import("./src/adService");
-        initializeAds().catch((error) => {
+        initializeAds(userData?.nick ?? undefined).catch((error) => {
           console.warn("[App] Failed to initialize ads:", error);
         });
 
@@ -2820,6 +2834,12 @@ const styles = StyleSheet.create({
   contentWrapperLandscape: {
     paddingTop: 0,
   },
+  // Tablet: centre content and constrain max width for comfortable reading
+  contentWrapperTablet: {
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: TABLET_MAX_CONTENT_WIDTH,
+  },
   screenArea: {
     flex: 1,
     marginTop: 8,
@@ -3239,6 +3259,13 @@ const styles = StyleSheet.create({
     overflow: "hidden", // Needed for BlurView rounded corners
     zIndex: 100,
   },
+  // Tablet: slightly wider tab bar for comfortable spacing on large screens
+  tabBarTablet: {
+    width: 400,
+    height: 68,
+    bottom: 48,
+    paddingHorizontal: 28,
+  },
   tabItem: {
     width: 48,
     alignItems: "center",
@@ -3247,6 +3274,11 @@ const styles = StyleSheet.create({
     marginVertical: 0,
     borderRadius: 24,
     zIndex: 1,
+  },
+  // Tablet: larger tap target
+  tabItemTablet: {
+    width: 64,
+    height: 68,
   },
   tabItemActiveBackground: {
     position: "absolute",

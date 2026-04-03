@@ -2,12 +2,66 @@
 
 import { RewardItem } from "./types";
 
-// Points earned per minute of listening
+// Points earned per minute of listening (base rate, before multiplier)
 export const POINTS_PER_MINUTE = 1;
+
+// ─── Badge / Multiplier System ────────────────────────────────────────────────
+// Each tier unlocks when the user reaches the required total listening hours.
+// The multiplier is PERMANENT and applies to every point earned after unlock.
+// Hard-capped at 1.8x — add custom bonuses in BADGE_BONUS_PERKS for cap users.
+export interface BadgeTier {
+  id: string;
+  hoursRequired: number;
+  multiplier: number;
+  title: string;
+  icon: string;
+}
+
+export const BADGE_TIERS: BadgeTier[] = [
+  { id: 'badge_10h',  hoursRequired: 10,  multiplier: 1.10, title: 'Začátečník',  icon: '🎵' },
+  { id: 'badge_50h',  hoursRequired: 50,  multiplier: 1.25, title: 'Posluchač',   icon: '🎶' },
+  { id: 'badge_100h', hoursRequired: 100, multiplier: 1.40, title: 'Nadšenec',    icon: '🎸' },
+  { id: 'badge_150h', hoursRequired: 150, multiplier: 1.50, title: 'Oddaný',      icon: '🎤' },
+  { id: 'badge_200h', hoursRequired: 200, multiplier: 1.60, title: 'Fanatik',     icon: '🎺' },
+  { id: 'badge_300h', hoursRequired: 300, multiplier: 1.70, title: 'Expert',      icon: '🎻' },
+  { id: 'badge_400h', hoursRequired: 400, multiplier: 1.75, title: 'Mistr',       icon: '🏆' },
+  { id: 'badge_500h', hoursRequired: 500, multiplier: 1.80, title: 'Legenda',     icon: '⭐' },
+];
+
+// Absolute ceiling — never exceeded regardless of future tiers.
+export const MAX_MULTIPLIER = 1.80;
+
+// Reserved for future high-tier perks once the user hits MAX_MULTIPLIER.
+// Add objects here (e.g. { type: 'exclusive_badge', id: 'hall_of_fame' }) —
+// no code changes needed to the multiplier logic.
+export const BADGE_BONUS_PERKS: { id: string; description: string }[] = [];
+
+/** Returns the highest unlocked BadgeTier for the given total minutes, or null. */
+export function getActiveBadgeTier(totalListeningMinutes: number): BadgeTier | null {
+  const totalHours = totalListeningMinutes / 60;
+  let active: BadgeTier | null = null;
+  for (const tier of BADGE_TIERS) {
+    if (totalHours >= tier.hoursRequired) {
+      active = tier;
+    }
+  }
+  return active;
+}
+
+/** Returns the current point multiplier for a given total minutes (1.0 if no badge). */
+export function getPointMultiplier(totalListeningMinutes: number): number {
+  const tier = getActiveBadgeTier(totalListeningMinutes);
+  return tier ? Math.min(tier.multiplier, MAX_MULTIPLIER) : 1.0;
+}
 
 // Weekly listening requirement (in minutes) for weekly rewards
 export const WEEKLY_HOURS_REQUIREMENT = 21; // 3 hours/day * 7 days
 export const WEEKLY_MINUTES_REQUIREMENT = WEEKLY_HOURS_REQUIREMENT * 60;
+
+// ─── Economy Scaling ─────────────────────────────────────────────────────────
+// Lower cost during early growth phase (small user base, low multipliers).
+// Revert AD_FREE_24H_COST back to 500 once multipliers of 1.4-1.8x are common.
+export const AD_FREE_24H_COST = 300; // was 500 — revert when economy inflates
 
 // Shop rewards configuration
 export const SHOP_REWARDS: RewardItem[] = [
@@ -16,7 +70,7 @@ export const SHOP_REWARDS: RewardItem[] = [
     type: "ad_free",
     title: "Bez reklam 24h",
     description: "Užij si 24 hodin poslechu bez reklam",
-    cost: 500,
+    cost: AD_FREE_24H_COST,
     duration: 24,
   },
   {

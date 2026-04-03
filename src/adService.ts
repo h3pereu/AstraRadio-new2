@@ -64,7 +64,7 @@ let interstitialAdInstance: any = null;
 let initStatus: 'idle' | 'in_progress' | 'success' | 'failed' = 'idle';
 let initWaiters: Array<(ready: boolean) => void> = [];
 
-export async function initializeAds(): Promise<boolean> {
+export async function initializeAds(userId?: string): Promise<boolean> {
   // If already successfully initialized, return true
   if (initStatus === 'success') return true;
 
@@ -89,10 +89,11 @@ export async function initializeAds(): Promise<boolean> {
       console.log('[LevelPlay] Adapter debug enabled');
     }
 
-    // Enable test ads/suite (useful for debugging 'No Fill' in preview builds)
-    if (LevelPlay.setMetaData) {
+    // Enable test ads/suite only in development builds
+    // ⚠️  Never enable in production — test mode serves test ads, not real revenue ads
+    if (__DEV__ && LevelPlay.setMetaData) {
       await LevelPlay.setMetaData('is_test_suite', ['enable']);
-      console.log('[LevelPlay] Test mode enabled');
+      console.log('[LevelPlay] Test mode enabled (dev only)');
     }
 
     // Mute ALL ad networks sounds (so radio continues playing during ads)
@@ -114,9 +115,13 @@ export async function initializeAds(): Promise<boolean> {
 
     console.log('[LevelPlay] Initializing with app key:', appKey, 'Platform:', Platform.OS);
 
-    // Create initialization request with user ID
+    // Use the real user ID (nick) for accurate Unity tracking.
+    // Falls back to a timestamp-based ID for guests / pre-login init.
+    const resolvedUserId = userId ?? ('guest-' + Date.now());
+    console.log('[LevelPlay] Setting userId for tracking:', resolvedUserId);
+
     const initRequest = LevelPlayInitRequest.builder(appKey)
-      .withUserId('test-user-' + Date.now())
+      .withUserId(resolvedUserId)
       .build();
 
     initStatus = 'in_progress';
@@ -124,6 +129,12 @@ export async function initializeAds(): Promise<boolean> {
     const initListener = {
       onInitSuccess: (config: any) => {
         console.log('[LevelPlay] ✅ Initialization SUCCESS!', JSON.stringify(config));
+        // The config object lists active networks — check this log after each build
+        // to confirm AdMob, Meta, Liftoff, and Yandex adapters are detected.
+        const networks = config?.availableAdapters ?? config?.adapters ?? [];
+        if (networks.length > 0) {
+          console.log('[LevelPlay] Active mediation networks:', networks.map((n: any) => n?.name ?? n).join(', '));
+        }
         isInitialized = true;
         resolveInitStatus('success');
 
