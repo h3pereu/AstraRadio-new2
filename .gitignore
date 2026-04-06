@@ -81,3 +81,21 @@ yarn-error.*
 *.tsbuildinfo
 
 # @end expo-cli
+
+# Secrets & credentials
+credentials.json
+credentials/
+release.keystore
+google-services.json
+GoogleService-Info.plist
+
+# Logs & IDE
+*.log
+crash.txt
+crash_utf8.txt
+error.txt
+logcat.txt
+prebuild_log.txt
+robocopy.log
+.idea/
+.vscode/

@@ -479,7 +479,7 @@ function App({
   useEffect(() => {
     StatusBar.setHidden(true, "fade");
     StatusBar.setBarStyle("light-content");
-    if (isLandscape) {
+    if (isLandscape && !isTablet) {
       setTabBarHeight(0);
     }
     if (Platform.OS === "android") {
@@ -492,7 +492,7 @@ function App({
 
   return (
     <SafeAreaProvider>
-      <StatusBar barStyle="light-content" hidden={isLandscape} />
+      <StatusBar barStyle="light-content" hidden={isLandscape && !isTablet} />
       <View style={styles.container}>
         <View style={styles.backgroundWash} />
         {/* Replaced Glow/Orb with blurred SVG equivalents */}
@@ -512,7 +512,7 @@ function App({
 
         <SafeAreaView
           style={styles.safeArea}
-          edges={isLandscape ? ["left", "right"] : ["top"]}
+          edges={(isLandscape && !isTablet) ? ["left", "right"] : ["top"]}
         >
           {showNotifications ? (
             <NotificationsScreen onBack={() => setShowNotifications(false)} />
@@ -521,11 +521,11 @@ function App({
               <View
                 style={[
                   styles.contentWrapper,
-                  isLandscape ? styles.contentWrapperLandscape : null,
+                  (isLandscape && !isTablet) ? styles.contentWrapperLandscape : null,
                   isTablet ? styles.contentWrapperTablet : null,
                 ]}
               >
-                {activeTab === "player" && !isLandscape ? (
+                {activeTab === "player" && (!isLandscape || isTablet) ? (
                   <MainHeader
                     onNotificationsPress={() => setShowNotifications(true)}
                     userData={userData}
@@ -536,7 +536,7 @@ function App({
                 <View
                   style={[
                     styles.screenArea,
-                    isLandscape ? styles.screenAreaLandscape : null,
+                    (isLandscape && !isTablet) ? styles.screenAreaLandscape : null,
                   ]}
                 >
                   <View
@@ -549,6 +549,7 @@ function App({
                   >
                     <PlayerScreen
                       tabBarHeight={tabBarHeight}
+                      isTablet={isTablet}
                       userData={userData}
                       onUserDataChange={onUserDataChange}
                     />
@@ -614,7 +615,7 @@ function App({
                   </View>
                 </View>
               </View>
-              {isLandscape ? null : (
+              {(isLandscape && !isTablet) ? null : (
                 <BottomTabs
                   activeTab={activeTab}
                   onChange={setActiveTab}
@@ -1720,10 +1721,12 @@ function ContactScreen() {
 
 function PlayerScreen({
   tabBarHeight,
+  isTablet,
   userData,
   onUserDataChange,
 }: {
   tabBarHeight?: number;
+  isTablet?: boolean;
   userData?: UserData | null;
   onUserDataChange?: (userData: UserData) => void;
 }) {
@@ -1761,7 +1764,7 @@ function PlayerScreen({
   const contentGap = Math.round((useCompactLayout ? 8 : 14) * scale);
   const baseTabBarHeight = isLandscape ? 64 : 38; // 38px Portrait
   const resolvedTabBarHeight = Math.max(tabBarHeight ?? 0, baseTabBarHeight);
-  const contentPaddingBottom = isLandscape
+  const contentPaddingBottom = (isLandscape && !isTablet)
     ? 0
     : Math.max(20, (tabBarHeight ?? 105) - (isCompact ? 10 : 0)); // Ensure clearance for navbar
   const waveRadius = waveRingSize / 2 - 10;

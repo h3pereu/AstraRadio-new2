@@ -10,7 +10,7 @@ export type IcecastSource = {
   [key: string]: unknown;
 };
 
-export const STATUS_URL = 'https://astra.icecast.cz/status-json.xsl';
+export const STATUS_URL = 'https://icecast.astraradio.cz/status-json.xsl';
 
 const CP1251_BASIC = [
   0x0402, 0x0403, 0x201a, 0x0453, 0x201e, 0x2026, 0x2020, 0x2021,

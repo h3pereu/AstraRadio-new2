@@ -238,7 +238,7 @@ export default function AppRoot() {
         onRequestLogin={handleRequestLogin}
         onLogout={handleLogout}
       />
-      <DebugOverlay />
+      {__DEV__ && <DebugOverlay />}
     </>
   );
 }

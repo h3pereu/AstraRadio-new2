@@ -2,7 +2,7 @@
   "expo": {
     "name": "Astra Radio",
     "slug": "astraradio",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -101,7 +101,9 @@
     "plugins": [
       "expo-font",
       "./plugins/withTikTokModularHeaders",
-      "./plugins/withAdMob"
+      "./plugins/withAdMob",
+      "./plugins/withGoogleServices",
+      "./plugins/withLevelPlayAdapters"
     ]
   }
 }

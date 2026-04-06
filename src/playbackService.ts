@@ -5,6 +5,7 @@ import { stations } from "./stations";
 const METADATA_INTERVAL_MS = 15000;
 const JINGLE_TITLE = "Astra Radio";
 const JINGLE_ARTWORK = "https://astraradio.cz/logo.png";
+const NOWPLAYING_ARTWORK = "https://icecast.astraradio.cz/nowplaying.jpg";
 const JINGLE_TITLE_LOWER = JINGLE_TITLE.toLowerCase();
 const isJingleTitle = (title?: string) =>
   title?.trim().toLowerCase() === JINGLE_TITLE_LOWER;
@@ -81,6 +82,13 @@ const fetchArtworkForTrack = async (artist?: string, title?: string) => {
 
   artworkFetchKey = key;
 
+  // Show nowplaying.jpg immediately while iTunes lookup runs
+  await updateActiveTrackMetadata({
+    title: normalizedTitle,
+    artist: normalizedArtist,
+    artwork: NOWPLAYING_ARTWORK,
+  });
+
   try {
     const response = await fetch(
       `https://itunes.apple.com/search?term=${encodeURIComponent(
@@ -94,7 +102,8 @@ const fetchArtworkForTrack = async (artist?: string, title?: string) => {
     const payload = await response.json();
     const artworkUrl = payload?.results?.[0]?.artworkUrl100;
     if (typeof artworkUrl !== "string" || !artworkUrl.length) {
-      artworkCache.set(key, null);
+      // iTunes found nothing — keep nowplaying.jpg as fallback
+      artworkCache.set(key, NOWPLAYING_ARTWORK);
       return;
     }
 
@@ -107,6 +116,8 @@ const fetchArtworkForTrack = async (artist?: string, title?: string) => {
     });
   } catch (error) {
     console.warn("Background artwork lookup failed", error);
+    // Network error — keep nowplaying.jpg
+    artworkCache.set(key, NOWPLAYING_ARTWORK);
   } finally {
     if (artworkFetchKey === key) {
       artworkFetchKey = null;
