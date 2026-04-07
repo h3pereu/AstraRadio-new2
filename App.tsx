@@ -456,7 +456,12 @@ function App({
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const isTablet = Math.min(width, height) >= TABLET_BREAKPOINT;
-  const { playing } = useIsPlaying();
+  const { playing, bufferingDuringPlay } = useIsPlaying();
+  const playerStatusLabel = (bufferingDuringPlay ?? false)
+    ? "Načítání"
+    : (playing ?? false)
+      ? "Přehrávání"
+      : "Pozastaveno";
 
   // Use listening tracker to earn points
   const { sessionPoints } = useListeningTracker(
@@ -531,6 +536,7 @@ function App({
                     userData={userData}
                     sessionPoints={sessionPoints}
                     onPointsPress={() => setActiveTab("menu")}
+                    statusLabel={playerStatusLabel}
                   />
                 ) : null}
                 <View
@@ -687,17 +693,34 @@ function MainHeader({
   userData,
   sessionPoints,
   onPointsPress,
+  statusLabel,
 }: {
   onNotificationsPress: () => void;
   userData: UserData | null;
   sessionPoints: number;
   onPointsPress: () => void;
+  statusLabel?: string;
 }) {
   return (
     <View style={styles.header}>
       <View>
         <Text style={styles.brand}>ASTRA RADIO</Text>
-        <Text style={styles.tagline}>Na druhé straně vlny</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 8 }}>
+          <Text style={styles.tagline}>Na druhé straně vlny</Text>
+          {statusLabel ? (
+            <LinearGradient
+              colors={["#003F62", "#101820"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={styles.liveIndicator}
+            >
+              <Text style={styles.liveText}>
+                <Text style={{ color: "#FFFFFF" }}>• </Text>
+                {statusLabel.toUpperCase()}
+              </Text>
+            </LinearGradient>
+          ) : null}
+        </View>
       </View>
       <View style={styles.headerRight}>
         <PointsDisplay
@@ -2720,17 +2743,6 @@ function PlayerScreen({
             }}
           >
             <View style={{ flexShrink: 1, justifyContent: "center" }}>
-              <LinearGradient
-                colors={["#003F62", "#101820"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={[styles.liveIndicator, { marginBottom: 4, alignSelf: "flex-start" }]}
-              >
-                <Text style={styles.liveText}>
-                  <Text style={{ color: "#FFFFFF" }}>• </Text>
-                  {statusLabel.toUpperCase()}
-                </Text>
-              </LinearGradient>
               {nowPlayingCard}
             </View>
             <View style={{ alignItems: "center" }}>{controlsBlock}</View>
@@ -2751,7 +2763,12 @@ function PlayerScreen({
                 end={{ x: 1, y: 0 }}
                 style={styles.adRewardGradient}
               >
-                <Text style={styles.adRewardIcon}>🎬</Text>
+                <View style={styles.adRewardIcon}>
+                  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
+                    <Circle cx={12} cy={12} r={11} stroke="#00E5FF" strokeWidth={1.5} />
+                    <Path d="M10 8.5L16 12L10 15.5V8.5Z" fill="#00E5FF" />
+                  </Svg>
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.adRewardTitle}>
                     {adRewardLoading
@@ -2966,7 +2983,6 @@ const styles = StyleSheet.create({
   tagline: {
     color: "#E6F1F5",
     fontSize: 12,
-    marginTop: 4,
     fontFamily: "Inter-Regular",
     fontWeight: "400",
     letterSpacing: 0,
@@ -3825,7 +3841,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(0, 229, 255, 0.2)",
   },
   adRewardIcon: {
-    fontSize: 22,
+    width: 24,
+    height: 24,
     marginRight: 10,
   },
   adRewardTitle: {
