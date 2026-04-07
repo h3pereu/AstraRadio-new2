@@ -2396,6 +2396,19 @@ function PlayerScreen({
           : null,
       ]}
     >
+      {/* Live status badge — inside the card so it never overlaps MainHeader */}
+      <LinearGradient
+        colors={["#003F62", "#101820"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+        style={[styles.liveIndicator, { marginBottom: 8, alignSelf: "flex-start" }]}
+      >
+        <Text style={styles.liveText}>
+          <Text style={{ color: "#FFFFFF" }}>• </Text>
+          {statusLabel.toUpperCase()}
+        </Text>
+      </LinearGradient>
+
       {artwork ? (
         <View
           style={[
@@ -2720,20 +2733,6 @@ function PlayerScreen({
             }}
           >
             <View style={{ flexShrink: 1, justifyContent: "center" }}>
-              <LinearGradient
-                colors={["#003F62", "#101820"]} // Match card gradient
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={[
-                  styles.liveIndicator,
-                  { marginBottom: 4, zIndex: 10, alignSelf: "flex-start" },
-                ]}
-              >
-                <Text style={styles.liveText}>
-                  <Text style={{ color: "#FFFFFF" }}>• </Text>
-                  {statusLabel.toUpperCase()}
-                </Text>
-              </LinearGradient>
               {nowPlayingCard}
             </View>
             <View style={{ alignItems: "center" }}>{controlsBlock}</View>
