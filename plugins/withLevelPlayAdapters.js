@@ -23,11 +23,10 @@ const path = require('path');
 
 // ─── Adapter definitions ──────────────────────────────────────────────────────
 
+// Note: IronSourceFacebookAdapter removed — requires Facebook App + Client Token not configured
 const IOS_ADAPTER_PODS = [
   // Google AdMob — required for AdMob ads via LevelPlay mediation
   "  pod 'IronSourceAdMobAdapter'",
-  // Meta Audience Network
-  "  pod 'IronSourceFacebookAdapter'",
   // Liftoff Monetize (formerly Vungle)
   "  pod 'IronSourceVungleAdapter'",
   // Yandex Ads
