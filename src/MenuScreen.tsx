@@ -8,6 +8,7 @@ import {
   Alert,
   ScrollView,
   TextInput,
+  Platform,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -313,8 +314,8 @@ export default function MenuScreen({
             )}
           </View>
 
-          {/* 3. Donate Button - Prominent position */}
-          <Pressable
+          {/* 3. Donate Button - Hidden on iOS (Apple IAP policy 3.1.1) */}
+          {Platform.OS !== 'ios' && <Pressable
             style={({ pressed }) => [
               styles.donateButton,
               pressed && styles.donateButtonPressed,
@@ -331,7 +332,7 @@ export default function MenuScreen({
               </Text>
             </View>
             <ArrowIcon />
-          </Pressable>
+          </Pressable>}
 
           {/* 4. Glassy Menu Buttons */}
           <View style={styles.menuGroup}>

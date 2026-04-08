@@ -29,6 +29,7 @@ import {
   logoutTikTok,
 } from "./src/tiktok";
 import { trackAppSession } from "./src/reviewPrompt";
+import { requestTrackingPermissionsAsync } from "expo-tracking-transparency";
 // DISABLED FOR DEBUGGING: import { initializeAds } from './src/adService';
 
 export default function AppRoot() {
@@ -58,6 +59,11 @@ export default function AppRoot() {
   const isOfflineRef = React.useRef(false); // Ref to avoid stale closure
 
   useEffect(() => {
+    // Request App Tracking Transparency permission on iOS
+    if (Platform.OS === 'ios') {
+      requestTrackingPermissionsAsync().catch(() => {});
+    }
+
     // Initialize TikTok SDK on app start
     initTikTok();
 
