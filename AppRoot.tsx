@@ -1,10 +1,12 @@
 // Main App Entry Point with Login Flow
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   View,
   StyleSheet,
-  ActivityIndicator,
+  Animated,
+  Easing,
+  Image,
   Text,
   Pressable,
   Platform,
@@ -30,7 +32,119 @@ import {
 } from "./src/tiktok";
 import { trackAppSession } from "./src/reviewPrompt";
 import { requestTrackingPermissionsAsync } from "expo-tracking-transparency";
+import * as SplashScreen from "expo-splash-screen";
 // DISABLED FOR DEBUGGING: import { initializeAds } from './src/adService';
+
+// Keep the native splash visible until JS is ready
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+function LoadingScreen() {
+  const logoAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Logo entrance
+    Animated.spring(logoAnim, {
+      toValue: 1,
+      tension: 60,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+
+    // Glow pulse loop
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(glowAnim, { toValue: 0, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    ).start();
+
+    // Bouncing dots
+    const makeBounce = (val: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(val, { toValue: -10, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(val, { toValue: 0, duration: 300, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          Animated.delay(600),
+        ])
+      );
+
+    Animated.parallel([
+      makeBounce(dot1, 0),
+      makeBounce(dot2, 180),
+      makeBounce(dot3, 360),
+    ]).start();
+  }, []);
+
+  const logoScale = logoAnim.interpolate({ inputRange: [0, 1], outputRange: [0.78, 1] });
+  const glowScale = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] });
+  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
+  const dot1Opacity = dot1.interpolate({ inputRange: [-10, 0], outputRange: [1, 0.35] });
+  const dot2Opacity = dot2.interpolate({ inputRange: [-10, 0], outputRange: [1, 0.35] });
+  const dot3Opacity = dot3.interpolate({ inputRange: [-10, 0], outputRange: [1, 0.35] });
+
+  return (
+    <View style={loadingStyles.container}>
+      <Animated.View style={[loadingStyles.ambient, { transform: [{ scale: glowScale }], opacity: glowOpacity }]} />
+      <Animated.View style={[loadingStyles.logoWrap, { opacity: logoAnim, transform: [{ scale: logoScale }] }]}>
+        <Animated.View style={[loadingStyles.glowRing, { transform: [{ scale: glowScale }], opacity: glowOpacity }]} />
+        <Image source={require("./assets/splash-icon.png")} style={loadingStyles.logo} />
+      </Animated.View>
+      <View style={loadingStyles.dots}>
+        <Animated.View style={[loadingStyles.dot, { transform: [{ translateY: dot1 }], opacity: dot1Opacity }]} />
+        <Animated.View style={[loadingStyles.dot, { transform: [{ translateY: dot2 }], opacity: dot2Opacity }]} />
+        <Animated.View style={[loadingStyles.dot, { transform: [{ translateY: dot3 }], opacity: dot3Opacity }]} />
+      </View>
+    </View>
+  );
+}
+
+const loadingStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#0B1014",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  ambient: {
+    position: "absolute",
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: "rgba(0,229,255,0.07)",
+  },
+  logoWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 64,
+  },
+  glowRing: {
+    position: "absolute",
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: "rgba(0,229,255,0.18)",
+  },
+  logo: {
+    width: 140,
+    height: 140,
+    borderRadius: 28,
+  },
+  dots: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#00E5FF",
+  },
+});
 
 export default function AppRoot() {
   const [isLoading, setIsLoading] = useState(true);
@@ -207,13 +321,18 @@ export default function AppRoot() {
     );
   }
 
+  // Hide native splash as soon as fonts are ready, then show our animated screen
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded]);
+
   // Wait for both network check (isLoading) and fonts
   if (isLoading || !fontsLoaded) {
     return (
       <SafeAreaProvider>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#00E5FF" />
-        </View>
+        <LoadingScreen />
       </SafeAreaProvider>
     );
   }
