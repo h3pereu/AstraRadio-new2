@@ -1,5 +1,4 @@
 import CarPlay
-import MediaPlayer
 import UIKit
 
 @available(iOS 14.0, *)
@@ -10,8 +9,8 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
   // Mirrors the station order and IDs from src/stations.ts
   private let stations: [(id: String, title: String)] = [
     ("astra-320", "320 kbps"),
-    ("astra-192", "192 kbps"),
     ("astra-128", "128 kbps"),
+    ("astra-192", "192 kbps"),
   ]
 
   // MARK: - CPTemplateApplicationSceneDelegate
@@ -53,6 +52,8 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
   private func handleStationSelected(id: String) {
     CarPlayBridge.shared?.switchStation(id: id)
+    // Rebuild root template so the checkmark reflects the new selection when user navigates back
+    interfaceController?.setRootTemplate(buildListTemplate(), animated: false, completion: nil)
     interfaceController?.pushTemplate(
       CPNowPlayingTemplate.shared,
       animated: true,
