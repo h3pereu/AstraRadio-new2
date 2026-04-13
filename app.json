@@ -82,7 +82,19 @@
           "UIInterfaceOrientationPortraitUpsideDown",
           "UIInterfaceOrientationLandscapeLeft",
           "UIInterfaceOrientationLandscapeRight"
-        ]
+        ],
+        "UIApplicationSceneManifest": {
+          "UIApplicationSupportsMultipleScenes": false,
+          "UISceneConfigurations": {
+            "CPTemplateApplicationSceneSessionRoleApplication": [
+              {
+                "UISceneClassName": "CPTemplateApplicationScene",
+                "UISceneDelegateClassName": "$(PRODUCT_MODULE_NAME).CarPlaySceneDelegate",
+                "UISceneConfigurationName": "CarPlay Configuration"
+              }
+            ]
+          }
+        }
       }
     },
     "android": {
