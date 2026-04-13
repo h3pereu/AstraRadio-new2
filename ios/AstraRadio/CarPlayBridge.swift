@@ -15,8 +15,18 @@ class CarPlayBridge: RCTEventEmitter {
     CarPlayBridge.shared = self
   }
 
+  private var hasListeners = false
+
   override func supportedEvents() -> [String]! {
     return ["carplay_switch_station"]
+  }
+
+  override func startObserving() {
+    hasListeners = true
+  }
+
+  override func stopObserving() {
+    hasListeners = false
   }
 
   override static func requiresMainQueueSetup() -> Bool {
@@ -26,6 +36,8 @@ class CarPlayBridge: RCTEventEmitter {
   /// Called by CarPlaySceneDelegate when the user picks a stream.
   func switchStation(id: String) {
     CarPlayBridge.activeStationId = id
-    sendEvent(withName: "carplay_switch_station", body: ["id": id])
+    if hasListeners {
+      sendEvent(withName: "carplay_switch_station", body: ["id": id])
+    }
   }
 }
