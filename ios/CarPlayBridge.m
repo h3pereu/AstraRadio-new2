@@ -1,4 +1,5 @@
 #import <React/RCTBridgeModule.h>
 #import <React/RCTEventEmitter.h>
 
-RCT_EXTERN_MODULE(CarPlayBridge, RCTEventEmitter)
+@interface RCT_EXTERN_MODULE(CarPlayBridge, RCTEventEmitter)
+@end
