@@ -37,10 +37,14 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     let activeId = CarPlayBridge.activeStationId
 
     let items: [CPListItem] = stations.map { station in
-      let item = CPListItem(text: station.title, detailText: "Astra Radio")
-      if station.id == activeId {
-        item.accessoryImage = UIImage(systemName: "checkmark")
-      }
+      let checkmark: UIImage? = (station.id == activeId) ? UIImage(systemName: "checkmark") : nil
+      let item = CPListItem(
+        text: station.title,
+        detailText: "Astra Radio",
+        image: nil,
+        accessoryImage: checkmark,
+        accessoryType: .none
+      )
       item.handler = { [weak self] _, completion in
         self?.handleStationSelected(id: station.id)
         completion()
