@@ -38,7 +38,9 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 
     let items: [CPListItem] = stations.map { station in
       let item = CPListItem(text: station.title, detailText: "Astra Radio")
-      item.accessoryType = (station.id == activeId) ? .checkmark : .none
+      if station.id == activeId {
+        item.accessoryImage = UIImage(systemName: "checkmark")
+      }
       item.handler = { [weak self] _, completion in
         self?.handleStationSelected(id: station.id)
         completion()
