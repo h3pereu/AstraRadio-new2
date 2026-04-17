@@ -1,7 +1,35 @@
 {
   "permissions": {
     "allow": [
-      "Bash(where gh:*)"
+      "Bash(where gh:*)",
+      "Bash(claude plugin:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git:*)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('expo',{}\\).get\\('ios',{}\\), indent=2\\)\\)\")",
+      "Bash(grep -E \"^/ios$|^ios/$|^ios$\")",
+      "Bash(plutil:*)",
+      "Bash(xxd /Users/h3per/Documents/GitHub/AstraRadio-new2/ios/AstraRadio/Info.plist)",
+      "Bash(ls /Users/h3per/Documents/GitHub/AstraRadio-new2/ios/AstraRadio/*.pbxproj)",
+      "Bash(ls /Users/h3per/Documents/GitHub/AstraRadio-new2/ios/*.xcodeproj)",
+      "Bash(xcodebuild -workspace AstraRadio.xcworkspace -scheme AstraRadio -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 16' build)",
+      "Bash(sudo xcode-select:*)",
+      "Bash(xcode-select -s /Applications/Xcode.app/Contents/Developer)",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)",
+      "Bash(tail -n +10 node_modules/expo/ios/Expo.swift)",
+      "Read(//tmp/**)",
+      "Bash(nm \"/Users/h3per/Library/Developer/Xcode/DerivedData/AstraRadio-cewjsgarjwakuzdinquhogpidifj/Build/Products/Debug-iphonesimulator/AstraRadio.app/AstraRadio\")",
+      "Bash(pod install:*)",
+      "Bash(npx expo:*)",
+      "Bash(rm -rf Pods Podfile.lock)",
+      "Bash(pod cache:*)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "mcp__plugin_claude-mem_mcp-search__get_observations"
     ]
+  },
+  "enabledPlugins": {
+    "cache-components@nextjs": true
   }
 }

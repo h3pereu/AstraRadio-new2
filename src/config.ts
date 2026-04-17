@@ -18,14 +18,14 @@ export interface BadgeTier {
 }
 
 export const BADGE_TIERS: BadgeTier[] = [
-  { id: 'badge_10h',  hoursRequired: 10,  multiplier: 1.10, title: 'Začátečník',  icon: '🎵' },
-  { id: 'badge_50h',  hoursRequired: 50,  multiplier: 1.25, title: 'Posluchač',   icon: '🎶' },
-  { id: 'badge_100h', hoursRequired: 100, multiplier: 1.40, title: 'Nadšenec',    icon: '🎸' },
-  { id: 'badge_150h', hoursRequired: 150, multiplier: 1.50, title: 'Oddaný',      icon: '🎤' },
-  { id: 'badge_200h', hoursRequired: 200, multiplier: 1.60, title: 'Fanatik',     icon: '🎺' },
-  { id: 'badge_300h', hoursRequired: 300, multiplier: 1.70, title: 'Expert',      icon: '🎻' },
-  { id: 'badge_400h', hoursRequired: 400, multiplier: 1.75, title: 'Mistr',       icon: '🏆' },
-  { id: 'badge_500h', hoursRequired: 500, multiplier: 1.80, title: 'Legenda',     icon: '⭐' },
+  { id: 'badge_10h',  hoursRequired: 10,  multiplier: 1.10, title: 'Nováček',           icon: 'rank_wave_1' },
+  { id: 'badge_50h',  hoursRequired: 50,  multiplier: 1.25, title: 'Stálý posluchač',   icon: 'rank_wave_2' },
+  { id: 'badge_100h', hoursRequired: 100, multiplier: 1.40, title: 'Hudební průzkumník', icon: 'rank_note' },
+  { id: 'badge_150h', hoursRequired: 150, multiplier: 1.50, title: 'Astra Insider',      icon: 'rank_mic' },
+  { id: 'badge_200h', hoursRequired: 200, multiplier: 1.60, title: 'Astra Ambasador',    icon: 'rank_headset' },
+  { id: 'badge_300h', hoursRequired: 300, multiplier: 1.70, title: 'Astra Virtuóz',      icon: 'rank_equalizer' },
+  { id: 'badge_400h', hoursRequired: 400, multiplier: 1.75, title: 'Astra Elite',        icon: 'rank_crown' },
+  { id: 'badge_500h', hoursRequired: 500, multiplier: 1.80, title: 'Astra Ikona',        icon: 'rank_star' },
 ];
 
 // Absolute ceiling — never exceeded regardless of future tiers.

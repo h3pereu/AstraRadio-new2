@@ -28,6 +28,9 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import DateTimePicker, {
+  type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import Svg, {
@@ -106,11 +109,7 @@ const nonLatinFontFamilySemi =
   }) ?? "System";
 
 const API_BASE = "https://astraradio.cz/api";
-const JINGLE_TITLE = "Astra Radio";
-const JINGLE_ARTWORK = "https://astraradio.cz/logo.png";
-const JINGLE_TITLE_LOWER = JINGLE_TITLE.toLowerCase();
-const isJingleTitle = (title?: string) =>
-  title?.trim().toLowerCase() === JINGLE_TITLE_LOWER;
+const NOWPLAYING_ARTWORK = "https://icecast.astraradio.cz/nowplaying.jpg";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const BASE_WIDTH = 390; // iPhone 13/14 base
@@ -231,11 +230,63 @@ function toLocalMinutes(isoDate?: string) {
 }
 
 function parseTimeToMinutes(value: string) {
-  if (!value || !/^\d{2}:\d{2}$/.test(value)) {
+  const normalized = String(value || "").trim();
+  const match = normalized.match(/^(\d{1,2})(?::(\d{1,2}))?$/);
+  if (!match) {
     return null;
   }
-  const [hours, minutes] = value.split(":").map(Number);
+  const hours = Number(match[1]);
+  const minutes = match[2] != null ? Number(match[2]) : 0;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return null;
+  }
   return (hours * 60 + minutes) % DAY_MINUTES;
+}
+
+function formatMinutesAsTime(minutes: number) {
+  const normalized = ((minutes % DAY_MINUTES) + DAY_MINUTES) % DAY_MINUTES;
+  const hours = Math.floor(normalized / 60);
+  const mins = normalized % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function timeValueToDate(value: string, fallbackMinutes = 0) {
+  const base = new Date();
+  const minutes = parseTimeToMinutes(value) ?? fallbackMinutes;
+  base.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+  return base;
+}
+
+function normalizeSearchValue(value: string) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isMinuteInFilterRange(
+  minute: number,
+  fromMin: number | null,
+  toMin: number | null,
+) {
+  if (fromMin == null && toMin == null) {
+    return true;
+  }
+
+  if (fromMin != null && toMin != null) {
+    if (fromMin <= toMin) {
+      return minute >= fromMin && minute <= toMin;
+    }
+    // Overnight window (e.g. 22:00 -> 06:00)
+    return minute >= fromMin || minute <= toMin;
+  }
+
+  if (fromMin != null) {
+    return minute >= fromMin;
+  }
+
+  return minute <= (toMin as number);
 }
 
 function splitRange(startMin: number, endMin: number) {
@@ -496,7 +547,7 @@ function App({
   }, [isLandscape]);
 
   return (
-    <SafeAreaProvider>
+    <View style={{ flex: 1, width: '100%', height: '100%' }}>
       <StatusBar barStyle="light-content" hidden={isLandscape && !isTablet} />
       <View style={styles.container}>
         <View style={styles.backgroundWash} />
@@ -649,7 +700,7 @@ function App({
           </View>
         ) : null}
       </View>
-    </SafeAreaProvider>
+    </View>
   );
 }
 
@@ -701,26 +752,27 @@ function MainHeader({
   onPointsPress: () => void;
   statusLabel?: string;
 }) {
+  const { width } = useWindowDimensions();
+  // Match the left edge of the now-playing card (maxWidth 340, centered)
+  const cardLeft = Math.max(14, (width - 340) / 2);
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { paddingLeft: cardLeft, paddingRight: cardLeft }]}>
       <View>
         <Text style={styles.brand}>ASTRA RADIO</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 8 }}>
-          <Text style={styles.tagline}>Na druhé straně vlny</Text>
-          {statusLabel ? (
-            <LinearGradient
-              colors={["#003F62", "#101820"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={styles.liveIndicator}
-            >
-              <Text style={styles.liveText}>
-                <Text style={{ color: "#FFFFFF" }}>• </Text>
-                {statusLabel.toUpperCase()}
-              </Text>
-            </LinearGradient>
-          ) : null}
-        </View>
+        <Text style={[styles.tagline, { marginTop: 4 }]}>Na druhé straně vlny</Text>
+        {statusLabel ? (
+          <LinearGradient
+            colors={["#003F62", "#101820"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={[styles.liveIndicator, { marginTop: 14, alignSelf: "flex-start" }]}
+          >
+            <Text style={styles.liveText}>
+              <Text style={{ color: "#FFFFFF" }}>• </Text>
+              {statusLabel.toUpperCase()}
+            </Text>
+          </LinearGradient>
+        ) : null}
       </View>
       <View style={styles.headerRight}>
         <PointsDisplay
@@ -1278,7 +1330,7 @@ function NewsScreen({ active }: { active: boolean }) {
 
     return (
       <ScrollView
-        contentContainerStyle={styles.screenContent}
+        contentContainerStyle={[styles.screenContent, styles.newsScreenContent]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -1360,7 +1412,7 @@ function NewsScreen({ active }: { active: boolean }) {
 
   return (
     <ScrollView
-      contentContainerStyle={styles.screenContent}
+      contentContainerStyle={[styles.screenContent, styles.newsScreenContent]}
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.screenTitle}>Novinky</Text>
@@ -1417,12 +1469,19 @@ function NewsScreen({ active }: { active: boolean }) {
 }
 
 function PlaylistScreen({ active }: { active: boolean }) {
+  type PickerField = "from" | "to";
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [filterQuery, setFilterQuery] = useState("");
   const [timeFrom, setTimeFrom] = useState("");
   const [timeTo, setTimeTo] = useState("");
+  const [activeTimePicker, setActiveTimePicker] = useState<PickerField | null>(
+    null,
+  );
+  const [pickerValue, setPickerValue] = useState(() =>
+    timeValueToDate("08:00", 8 * 60),
+  );
   const [showBannerAd, setShowBannerAd] = useState(false);
   const bannerAdViewRef = useRef<LevelPlayBannerAdViewMethods>(null);
   const bannerLoadStarted = useRef(false);
@@ -1485,7 +1544,7 @@ function PlaylistScreen({ active }: { active: boolean }) {
       setError("");
 
       try {
-        const response = await fetch(`${API_BASE}/history?limit=120`);
+        const response = await fetch(`${API_BASE}/history?limit=1000`);
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
@@ -1543,28 +1602,29 @@ function PlaylistScreen({ active }: { active: boolean }) {
   }, [active, bannerDebug]);
 
   const filteredItems = useMemo(() => {
-    const query = filterQuery.trim().toLowerCase();
+    const queryTokens = normalizeSearchValue(filterQuery)
+      .split(/\s+/)
+      .filter(Boolean);
     const fromMin = parseTimeToMinutes(timeFrom);
     const toMin = parseTimeToMinutes(timeTo);
-    const useTimeFilter = fromMin != null && toMin != null;
 
     return items.filter((item) => {
       const title = (item.title ?? "").toString();
-      if (query && !title.toLowerCase().includes(query)) {
+      const normalizedTitle = normalizeSearchValue(title);
+      if (
+        queryTokens.length > 0 &&
+        !queryTokens.every((token) => normalizedTitle.includes(token))
+      ) {
         return false;
       }
 
-      if (useTimeFilter) {
+      if (fromMin != null || toMin != null) {
         const startMin = toLocalMinutes(item.started_at);
-        const endMin =
-          toLocalMinutes(item.ended_at) ??
-          (startMin != null ? (startMin + 1) % DAY_MINUTES : null);
-
-        if (startMin == null || endMin == null) {
+        if (startMin == null) {
           return false;
         }
 
-        if (!rangesOverlap(startMin, endMin, fromMin, toMin)) {
+        if (!isMinuteInFilterRange(startMin, fromMin, toMin)) {
           return false;
         }
       }
@@ -1579,11 +1639,70 @@ function PlaylistScreen({ active }: { active: boolean }) {
     setTimeTo("");
   }, []);
 
+  const openTimePicker = useCallback(
+    (field: PickerField) => {
+      const fallback = field === "from" ? 8 * 60 : 18 * 60;
+      const currentValue = field === "from" ? timeFrom : timeTo;
+      setPickerValue(timeValueToDate(currentValue, fallback));
+      setActiveTimePicker(field);
+    },
+    [timeFrom, timeTo],
+  );
+
+  const applyPickedTime = useCallback((field: PickerField, date: Date) => {
+    const formatted = formatMinutesAsTime(
+      date.getHours() * 60 + date.getMinutes(),
+    );
+    if (field === "from") {
+      setTimeFrom(formatted);
+      return;
+    }
+    setTimeTo(formatted);
+  }, []);
+
+  const handlePickerChange = useCallback(
+    (event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (!activeTimePicker) {
+        return;
+      }
+
+      if (Platform.OS === "android") {
+        if (event.type === "dismissed") {
+          setActiveTimePicker(null);
+          return;
+        }
+
+        if (selectedDate) {
+          applyPickedTime(activeTimePicker, selectedDate);
+        }
+        setActiveTimePicker(null);
+        return;
+      }
+
+      if (selectedDate) {
+        setPickerValue(selectedDate);
+      }
+    },
+    [activeTimePicker, applyPickedTime],
+  );
+
+  const handlePickerCancel = useCallback(() => {
+    setActiveTimePicker(null);
+  }, []);
+
+  const handlePickerDone = useCallback(() => {
+    if (!activeTimePicker) {
+      return;
+    }
+    applyPickedTime(activeTimePicker, pickerValue);
+    setActiveTimePicker(null);
+  }, [activeTimePicker, applyPickedTime, pickerValue]);
+
   const shouldRenderBanner = showBannerAd || bannerDebug;
 
   return (
     <ScrollView
-      contentContainerStyle={styles.screenContent}
+      contentContainerStyle={[styles.screenContent, styles.playlistScreenContent]}
       showsVerticalScrollIndicator={false}
     >
       <Text style={styles.screenTitle}>Playlist</Text>
@@ -1597,24 +1716,42 @@ function PlaylistScreen({ active }: { active: boolean }) {
           style={styles.filterInput}
         />
         <View style={styles.filterRow}>
-          <TextInput
-            value={timeFrom}
-            onChangeText={setTimeFrom}
-            placeholder="Od 08:00"
-            placeholderTextColor="rgba(207, 239, 240, 0.5)"
-            style={[styles.filterInput, styles.filterInputSmall]}
-            keyboardType="numbers-and-punctuation"
-            maxLength={5}
-          />
-          <TextInput
-            value={timeTo}
-            onChangeText={setTimeTo}
-            placeholder="Do 18:00"
-            placeholderTextColor="rgba(207, 239, 240, 0.5)"
-            style={[styles.filterInput, styles.filterInputSmall]}
-            keyboardType="numbers-and-punctuation"
-            maxLength={5}
-          />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => openTimePicker("from")}
+            style={({ pressed }) => [
+              styles.timeSelectButton,
+              styles.filterInputSmall,
+              pressed ? styles.timeSelectPressed : null,
+            ]}
+          >
+            <Text
+              style={[
+                styles.timeSelectText,
+                !timeFrom ? styles.timeSelectPlaceholder : null,
+              ]}
+            >
+              {timeFrom || "Od 08:00"}
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => openTimePicker("to")}
+            style={({ pressed }) => [
+              styles.timeSelectButton,
+              styles.filterInputSmall,
+              pressed ? styles.timeSelectPressed : null,
+            ]}
+          >
+            <Text
+              style={[
+                styles.timeSelectText,
+                !timeTo ? styles.timeSelectPlaceholder : null,
+              ]}
+            >
+              {timeTo || "Do 18:00"}
+            </Text>
+          </Pressable>
           <Pressable
             accessibilityRole="button"
             onPress={handleResetFilters}
@@ -1626,6 +1763,50 @@ function PlaylistScreen({ active }: { active: boolean }) {
             <Text style={styles.filterResetText}>Reset</Text>
           </Pressable>
         </View>
+
+        {activeTimePicker ? (
+          <View style={styles.timePickerPanel}>
+            <DateTimePicker
+              value={pickerValue}
+              mode="time"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handlePickerChange}
+              is24Hour
+            />
+            {Platform.OS === "ios" ? (
+              <View style={styles.timePickerActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handlePickerCancel}
+                  style={({ pressed }) => [
+                    styles.timePickerAction,
+                    pressed ? styles.timePickerActionPressed : null,
+                  ]}
+                >
+                  <Text style={styles.timePickerActionText}>Zrušit</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handlePickerDone}
+                  style={({ pressed }) => [
+                    styles.timePickerAction,
+                    styles.timePickerActionPrimary,
+                    pressed ? styles.timePickerActionPressed : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.timePickerActionText,
+                      styles.timePickerActionTextPrimary,
+                    ]}
+                  >
+                    Hotovo
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </View>
 
       {/* Trigger init check on mount */}
@@ -1767,7 +1948,7 @@ function PlayerScreen({
   const titleSize = Math.round((isLandscape ? 18 : 16) * scale); // 16px base
   const artistSize = Math.round((isLandscape ? 12 : 10) * scale); // 10px base
   const playButtonSize = Math.round((isLandscape ? 64 : 84) * scale); // Increased from 76
-  const waveRingSize = Math.round((isLandscape ? 132 : 156) * scale);
+  const waveRingSize = Math.round((isLandscape ? 104 : 156) * scale);
   const waveScale = isLandscape ? 1 : scale;
   const cardPadding = Math.round(20 * scale);
   const cardRadius = Math.round(24 * scale);
@@ -1784,6 +1965,7 @@ function PlayerScreen({
   const qualityValueSize = Math.round(14 * scale); // Increased from 12
   const qualityUnitSize = Math.round(11 * scale); // Increased from 10
   const qualityCardHeight = Math.round(64 * scale); // Increased from 56
+  const cardContainerWidth = Math.min(width, 340);
   const contentGap = Math.round((useCompactLayout ? 8 : 14) * scale);
   const baseTabBarHeight = isLandscape ? 64 : 38; // 38px Portrait
   const resolvedTabBarHeight = Math.max(tabBarHeight ?? 0, baseTabBarHeight);
@@ -1792,9 +1974,9 @@ function PlayerScreen({
     : Math.max(20, (tabBarHeight ?? 105) - (isCompact ? 10 : 0)); // Ensure clearance for navbar
   const waveRadius = waveRingSize / 2 - 10;
   const waveBarCount = 24;
-  const landscapeMaxWidth = Math.min(width - 48, Math.round(width * 0.85));
-  const leftColumnMaxWidth = Math.round(landscapeMaxWidth * 0.52);
-  const rightColumnWidth = Math.round(landscapeMaxWidth * 0.38);
+  const landscapeMaxWidth = Math.min(width - 32, Math.round(width * 0.94));
+  const leftColumnMaxWidth = Math.round(landscapeMaxWidth * 0.50);
+  const rightColumnWidth = landscapeMaxWidth - leftColumnMaxWidth - 24;
   const constellationWidth = Math.min(width * (isLandscape ? 1.1 : 1.25), 760);
   const constellationHeight = Math.round(constellationWidth * 0.43);
   const constellationLeft = Math.round((width - constellationWidth) / 2);
@@ -1817,9 +1999,8 @@ function PlayerScreen({
   } | null>(null);
   const waveSeedRef = useRef(Math.floor(Math.random() * 1000000));
   const setupRef = useRef(false);
-  const artworkCacheRef = useRef(new Map<string, string | null>());
-  const artworkFetchRef = useRef<string | null>(null);
   const liveMetadataRef = useRef<typeof liveMetadata>(null);
+  const lastActiveTrackIdRef = useRef<string | undefined>(undefined);
   const lastIcecastTitleRef = useRef<string | null>(null);
   const icecastCancelledRef = useRef(false);
   const waveBars = useMemo(
@@ -1958,7 +2139,18 @@ function PlayerScreen({
   }, [activeTrack]);
 
   useEffect(() => {
-    setLiveMetadata(null);
+    const newId = activeTrack?.id;
+    const prevId = lastActiveTrackIdRef.current;
+    // Only clear metadata when switching to a different station.
+    // Don't clear when the track becomes null (e.g. playback stopped) so the
+    // last known song title stays visible instead of reverting to station name.
+    if (newId && prevId && newId !== prevId) {
+      setLiveMetadata(null);
+      lastIcecastTitleRef.current = null;
+    }
+    if (newId) {
+      lastActiveTrackIdRef.current = newId;
+    }
   }, [activeTrack?.id]);
 
   useEffect(() => {
@@ -1998,99 +2190,6 @@ function PlayerScreen({
       });
     },
     [],
-  );
-
-  const fetchArtworkForTrack = useCallback(
-    async (artist?: string, title?: string) => {
-      const normalizedTitle = title?.trim();
-      const normalizedArtist = artist?.trim();
-
-      if (isJingleTitle(normalizedTitle)) {
-        const resolvedTitle = normalizedTitle ?? JINGLE_TITLE;
-        const resolvedArtist = normalizedArtist ?? JINGLE_TITLE;
-        setLiveMetadata((current) => ({
-          ...(current ?? {}),
-          title: resolvedTitle,
-          artist: resolvedArtist,
-          artwork: JINGLE_ARTWORK,
-        }));
-        applyMetadata({
-          title: resolvedTitle,
-          artist: resolvedArtist,
-          artwork: JINGLE_ARTWORK,
-        });
-        return;
-      }
-
-      if (!normalizedArtist || !normalizedTitle) {
-        return;
-      }
-
-      const key = `${normalizedArtist} - ${normalizedTitle}`.toLowerCase();
-      if (artworkCacheRef.current.has(key)) {
-        const cachedArtwork = artworkCacheRef.current.get(key);
-        if (cachedArtwork) {
-          setLiveMetadata((current) => ({
-            ...(current ?? {}),
-            title: normalizedTitle,
-            artist: normalizedArtist,
-            artwork: cachedArtwork,
-          }));
-          applyMetadata({
-            title: normalizedTitle,
-            artist: normalizedArtist,
-            artwork: cachedArtwork,
-          });
-        }
-        return;
-      }
-
-      if (artworkFetchRef.current === key) {
-        return;
-      }
-
-      artworkFetchRef.current = key;
-
-      try {
-        const term = encodeURIComponent(
-          `${normalizedArtist} ${normalizedTitle}`,
-        );
-        const response = await fetch(
-          `https://itunes.apple.com/search?term=${term}&entity=song&limit=1`,
-        );
-        if (!response.ok) {
-          return;
-        }
-
-        const payload = await response.json();
-        const artworkUrl = payload?.results?.[0]?.artworkUrl100;
-        if (typeof artworkUrl !== "string" || !artworkUrl.length) {
-          artworkCacheRef.current.set(key, null);
-          return;
-        }
-
-        const highResArtwork = artworkUrl.replace("100x100bb", "600x600bb");
-        artworkCacheRef.current.set(key, highResArtwork);
-        setLiveMetadata((current) => ({
-          ...(current ?? {}),
-          title: normalizedTitle,
-          artist: normalizedArtist,
-          artwork: highResArtwork,
-        }));
-        applyMetadata({
-          title: normalizedTitle,
-          artist: normalizedArtist,
-          artwork: highResArtwork,
-        });
-      } catch (error) {
-        console.warn("Artwork lookup failed", error);
-      } finally {
-        if (artworkFetchRef.current === key) {
-          artworkFetchRef.current = null;
-        }
-      }
-    },
-    [applyMetadata],
   );
 
   const refreshIcecast = useCallback(async () => {
@@ -2141,29 +2240,22 @@ function PlayerScreen({
 
       const resolvedTitle = title ?? activeStation.title;
       const resolvedArtist = artist ?? activeStation.artist;
-      const isJingle = isJingleTitle(resolvedTitle);
-      const resolvedArtwork = isJingle ? JINGLE_ARTWORK : activeStation.artwork;
 
       setLiveMetadata((current) => ({
         ...(current ?? {}),
         title: resolvedTitle,
         artist: resolvedArtist,
-        artwork: isJingle ? JINGLE_ARTWORK : undefined,
       }));
 
       applyMetadata({
         title: resolvedTitle,
         artist: resolvedArtist,
-        artwork: resolvedArtwork,
+        artwork: NOWPLAYING_ARTWORK,
       });
-
-      if (!isJingle) {
-        void fetchArtworkForTrack(resolvedArtist, resolvedTitle);
-      }
     } catch (error) {
       console.warn("Icecast metadata fetch failed", error);
     }
-  }, [activeStation, applyMetadata, fetchArtworkForTrack, parseMetadata]);
+  }, [activeStation, applyMetadata, parseMetadata]);
 
   useEffect(() => {
     if (!activeStation) {
@@ -2197,26 +2289,6 @@ function PlayerScreen({
   useTrackPlayerEvents(
     [Event.PlaybackMetadataReceived, Event.MetadataCommonReceived],
     (event) => {
-      if (event.type === Event.MetadataCommonReceived) {
-        const artwork = event.metadata?.artworkUri?.trim() || undefined;
-
-        if (!artwork) {
-          return;
-        }
-
-        setLiveMetadata((current) => ({
-          ...(current ?? {}),
-          artwork,
-        }));
-
-        applyMetadata({
-          title: liveMetadataRef.current?.title ?? activeStation?.title,
-          artist: liveMetadataRef.current?.artist ?? activeStation?.artist,
-          artwork,
-        });
-        return;
-      }
-
       const { title, artist } = parseMetadata(
         event.title ?? undefined,
         event.artist ?? undefined,
@@ -2228,27 +2300,18 @@ function PlayerScreen({
 
       const resolvedTitle = title ?? activeStation?.title;
       const resolvedArtist = artist ?? activeStation?.artist;
-      const isJingle = isJingleTitle(resolvedTitle);
-      const resolvedArtwork = isJingle
-        ? JINGLE_ARTWORK
-        : activeStation?.artwork;
 
       setLiveMetadata((current) => ({
         ...(current ?? {}),
         title: resolvedTitle,
         artist: resolvedArtist,
-        artwork: isJingle ? JINGLE_ARTWORK : undefined,
       }));
 
       applyMetadata({
         title: resolvedTitle,
         artist: resolvedArtist,
-        artwork: resolvedArtwork,
+        artwork: NOWPLAYING_ARTWORK,
       });
-
-      if (!isJingle) {
-        void fetchArtworkForTrack(resolvedArtist, resolvedTitle);
-      }
     },
   );
 
@@ -2263,7 +2326,7 @@ function PlayerScreen({
     liveMetadata?.artwork ??
     activeTrack?.artwork ??
     activeStation?.artwork ??
-    JINGLE_ARTWORK;
+    NOWPLAYING_ARTWORK;
   const displayTitle =
     liveMetadata?.title ?? activeTrack?.title ?? "Pick a station";
   const displayArtist =
@@ -2437,13 +2500,23 @@ function PlayerScreen({
               <ActivityIndicator color={colors.accent} />
             </View>
           ) : null}
-          <Image
-            source={{ uri: artwork }}
-            style={styles.artwork}
-            onLoadStart={() => setArtworkLoading(true)}
-            onLoadEnd={() => setArtworkLoading(false)}
-            onError={() => setArtworkLoading(false)}
-          />
+          <View
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: artworkRadius,
+              overflow: "hidden",
+              backgroundColor: colors.background,
+            }}
+          >
+            <Image
+              source={{ uri: artwork }}
+              style={styles.artwork}
+              onLoadStart={() => setArtworkLoading(true)}
+              onLoadEnd={() => setArtworkLoading(false)}
+              onError={() => setArtworkLoading(false)}
+            />
+          </View>
         </View>
       ) : null}
       <Text
@@ -2480,7 +2553,6 @@ function PlayerScreen({
       style={[
         styles.controls,
         isLandscape ? styles.controlsLandscape : null,
-        !isLandscape ? { marginVertical: controlsMargin } : null,
       ]}
     >
       <View
@@ -2616,13 +2688,16 @@ function PlayerScreen({
       style={[
         styles.qualitySection,
         isLandscape ? styles.qualitySectionLandscape : null,
+        !isLandscape ? { width: cardContainerWidth } : null,
       ]}
     >
-      <View style={styles.qualityLabelContainer}>
-        <Text style={styles.sectionLabel}>Kvalita</Text>
-      </View>
+      {!isLandscape ? (
+        <View style={[styles.qualityLabelContainer, { width: cardContainerWidth }]}>
+          <Text style={styles.sectionLabel}>Kvalita</Text>
+        </View>
+      ) : null}
       <View
-        style={[styles.qualityRow, !isLandscape ? { gap: qualityGap } : null]}
+        style={[styles.qualityRow, !isLandscape ? { gap: qualityGap, width: cardContainerWidth } : { width: rightColumnWidth }]}
       >
         {stations.map((station, index) => {
           const isActive = activeStation?.id === station.id;
@@ -2730,29 +2805,26 @@ function PlayerScreen({
         ) : (
           <View
             style={{
-              width: "100%", // Use full width of parent
-              maxWidth: 340, // Cap it for aesthetics
+              width: "100%",
+              maxWidth: 340,
               alignSelf: "center",
-              marginTop: 0, // REMOVE the fixed margin
-              paddingTop: 10, // Add a small safe padding
               flex: 1,
-              // 'space-evenly' will distribute white space automatically between top, middle, bottom
-              justifyContent: "space-evenly",
-              // Ensure we clear the tab bar. 20 is a safe buffer.
-              paddingBottom: (tabBarHeight || 80) + 20,
+              justifyContent: "space-between",
+              paddingBottom: 52,
             }}
           >
             <View style={{ flexShrink: 1, justifyContent: "center" }}>
               {nowPlayingCard}
             </View>
             <View style={{ alignItems: "center" }}>{controlsBlock}</View>
-            <View>{qualityBlock}</View>
+            <View style={{ width: "100%" }}>{qualityBlock}</View>
             {/* Watch Ad for Points Banner */}
             <Pressable
               onPress={handleWatchAdForPoints}
               disabled={adRewardLoading}
               style={({ pressed }) => [
                 styles.adRewardBanner,
+                { borderRadius: cardRadius },
                 pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] },
                 adRewardLoading && { opacity: 0.5 },
               ]}
@@ -2761,7 +2833,7 @@ function PlayerScreen({
                 colors={["rgba(0, 229, 255, 0.12)", "rgba(0, 229, 255, 0.04)"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.adRewardGradient}
+                style={[styles.adRewardGradient, { borderRadius: cardRadius }]}
               >
                 <View style={styles.adRewardIcon}>
                   <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
@@ -2859,7 +2931,7 @@ const styles = StyleSheet.create({
   },
   screenArea: {
     flex: 1,
-    marginTop: 8,
+    marginTop: 0,
   },
   screenAreaLandscape: {
     marginTop: 0,
@@ -2882,6 +2954,12 @@ const styles = StyleSheet.create({
     paddingTop: 4, // Reduced from 12
     paddingBottom: 140, // Increased to 140
     paddingHorizontal: 20,
+  },
+  newsScreenContent: {
+    paddingBottom: 112,
+  },
+  playlistScreenContent: {
+    paddingBottom: 108,
   },
   playerContent: {
     flex: 1,
@@ -2911,8 +2989,8 @@ const styles = StyleSheet.create({
   },
   playerLandscapeRight: {
     alignItems: "center",
-    justifyContent: "center",
-    gap: 14,
+    justifyContent: "space-around",
+    paddingVertical: 12,
   },
   playerConstellation: {
     position: "absolute",
@@ -2959,8 +3037,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   header: {
-    paddingHorizontal: 14, // 14px from left corner
-    marginTop: 14, // "Add another 14px" from top
+    marginTop: 14,
     flexDirection: "row",
     alignItems: "flex-start", // Top alignment
     justifyContent: "space-between",
@@ -2968,7 +3045,6 @@ const styles = StyleSheet.create({
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 8, // Push down to visually center with "Astra Radio" text
   },
   // ... (skipping some lines) ...
 
@@ -3034,9 +3110,8 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 22,
-    overflow: "visible", // Changed to visible for shadow?
-    // borderWidth: 1, // Removed outline
-    // borderColor: 'rgba(0, 229, 255, 0.4)',
+    overflow: "visible",
+    backgroundColor: "#000",
     marginBottom: 16,
     // Shadow Request: #00E5FF 25% 0 4 20
     shadowColor: "#00E5FF",
@@ -3060,7 +3135,6 @@ const styles = StyleSheet.create({
   artwork: {
     width: "100%",
     height: "100%",
-    borderRadius: 16, // Added corner radius to image
   },
   sectionLabel: {
     color: colors.textMuted,
@@ -3072,7 +3146,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   liveIndicator: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 999,
     // borderWidth: 1, // Removed red outline
@@ -3087,8 +3161,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   qualityLabelContainer: {
-    width: 309, // 3 * 87 + 2 * 24
-    alignSelf: "center",
+    width: "100%",
     marginBottom: 4,
   },
   trackTitle: {
@@ -3185,7 +3258,6 @@ const styles = StyleSheet.create({
   },
   playButtonCirclePressed: {
     transform: [{ scale: 0.95 }],
-    opacity: 0.9,
   },
   pauseIcon: {
     flexDirection: "row",
@@ -3208,6 +3280,7 @@ const styles = StyleSheet.create({
   },
   qualitySection: {
     marginTop: 0,
+    width: "100%",
   },
   qualitySectionLandscape: {
     marginTop: 0,
@@ -3215,11 +3288,11 @@ const styles = StyleSheet.create({
   },
   qualityRow: {
     flexDirection: "row",
-    gap: 24, // Gap 24
-    justifyContent: "center",
+    gap: 24,
+    width: "100%",
   },
   qualityCard: {
-    width: 87,
+    flex: 1,
     height: 56,
     backgroundColor: "transparent",
     borderRadius: 22,
@@ -3551,6 +3624,65 @@ const styles = StyleSheet.create({
   },
   filterInputSmall: {
     flex: 0.9,
+  },
+  timeSelectButton: {
+    backgroundColor: "rgba(10, 15, 20, 0.7)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0, 229, 255, 0.25)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    justifyContent: "center",
+  },
+  timeSelectPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  timeSelectText: {
+    color: colors.textPrimary,
+    fontFamily: fonts.body,
+    fontSize: 13,
+  },
+  timeSelectPlaceholder: {
+    color: "rgba(207, 239, 240, 0.5)",
+  },
+  timePickerPanel: {
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0, 229, 255, 0.2)",
+    backgroundColor: "rgba(10, 15, 20, 0.72)",
+    overflow: "hidden",
+  },
+  timePickerActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
+  timePickerAction: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(0, 229, 255, 0.25)",
+    backgroundColor: "rgba(0, 229, 255, 0.06)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  timePickerActionPrimary: {
+    borderColor: "rgba(0, 229, 255, 0.45)",
+    backgroundColor: "rgba(0, 229, 255, 0.16)",
+  },
+  timePickerActionPressed: {
+    transform: [{ scale: 0.97 }],
+  },
+  timePickerActionText: {
+    color: colors.textMuted,
+    fontFamily: fonts.bodySemi,
+    fontSize: 12,
+    letterSpacing: 0.4,
+  },
+  timePickerActionTextPrimary: {
+    color: colors.accent,
   },
   filterReset: {
     alignItems: "center",

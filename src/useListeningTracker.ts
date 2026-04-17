@@ -98,7 +98,7 @@ export default function useListeningTracker(
                 await import('./storage').then(({ saveUserData }) => saveUserData(updatedUser));
                 console.log(`[useListeningTracker] Badge unlocked: ${activeTier.title} (${activeTier.multiplier}x)`);
                 Alert.alert(
-                  `${activeTier.icon} Nový odznak!`,
+                  "Nový odznak!",
                   `Odemkl jsi odznak „${activeTier.title}"!\nTvůj multiplikátor bodů je nyní ${activeTier.multiplier}×.`,
                   [{ text: 'Super! 🎉' }],
                 );

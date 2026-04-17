@@ -18,9 +18,18 @@ type LogEntry = {
 // Global log buffer
 const logBuffer: LogEntry[] = [];
 const LISTENERS = new Set<() => void>();
+let notifyScheduled = false;
 
-function notifyListeners() {
-  LISTENERS.forEach((l) => l());
+function notifyListenersAsync() {
+  if (notifyScheduled) {
+    return;
+  }
+  notifyScheduled = true;
+
+  setTimeout(() => {
+    notifyScheduled = false;
+    LISTENERS.forEach((listener) => listener());
+  }, 0);
 }
 
 // Hook console methods
@@ -52,7 +61,7 @@ console.log = (...args) => {
   };
   logBuffer.push(entry);
   if (logBuffer.length > 500) logBuffer.shift(); // Keep last 500
-  notifyListeners();
+  notifyListenersAsync();
 };
 
 console.warn = (...args) => {
@@ -64,7 +73,7 @@ console.warn = (...args) => {
   };
   logBuffer.push(entry);
   if (logBuffer.length > 500) logBuffer.shift();
-  notifyListeners();
+  notifyListenersAsync();
 };
 
 console.error = (...args) => {
@@ -76,7 +85,7 @@ console.error = (...args) => {
   };
   logBuffer.push(entry);
   if (logBuffer.length > 500) logBuffer.shift();
-  notifyListeners();
+  notifyListenersAsync();
 };
 
 export function DebugOverlay() {

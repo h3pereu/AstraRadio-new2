@@ -11,8 +11,8 @@ import {
   Pressable,
   Platform,
 } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useFonts } from "expo-font"; // Import useFonts
+import { SafeAreaProvider, initialWindowMetrics } from "react-native-safe-area-context";
+import { useFonts } from "expo-font";
 import NetInfo from "@react-native-community/netinfo";
 import {
   getUserData,
@@ -23,7 +23,7 @@ import {
 import { UserData } from "./src/types";
 import LoginScreen from "./src/LoginScreen";
 import MainApp from "./App";
-import { DebugOverlay } from "./src/DebugOverlay"; // Import debug overlay
+import { DebugOverlay } from "./src/DebugOverlay";
 import {
   initTikTok,
   identifyUser,
@@ -33,9 +33,7 @@ import {
 import { trackAppSession } from "./src/reviewPrompt";
 import { requestTrackingPermissionsAsync } from "expo-tracking-transparency";
 import * as SplashScreen from "expo-splash-screen";
-// DISABLED FOR DEBUGGING: import { initializeAds } from './src/adService';
 
-// Keep the native splash visible until JS is ready
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function LoadingScreen() {
@@ -46,7 +44,6 @@ function LoadingScreen() {
   const dot3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Logo entrance
     Animated.spring(logoAnim, {
       toValue: 1,
       tension: 60,
@@ -54,7 +51,6 @@ function LoadingScreen() {
       useNativeDriver: true,
     }).start();
 
-    // Glow pulse loop
     Animated.loop(
       Animated.sequence([
         Animated.timing(glowAnim, { toValue: 1, duration: 1200, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
@@ -62,7 +58,6 @@ function LoadingScreen() {
       ])
     ).start();
 
-    // Bouncing dots
     const makeBounce = (val: Animated.Value, delay: number) =>
       Animated.loop(
         Animated.sequence([
@@ -151,62 +146,52 @@ export default function AppRoot() {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [showLogin, setShowLogin] = useState(false);
 
-  // Load fonts globally
   const [fontsLoaded] = useFonts({
     "Inter-SemiBold": require("./assets/fonts/Inter-SemiBold.ttf"),
     "Inter-Regular": require("./assets/fonts/Inter-Regular.ttf"),
     "Onest-Bold": require("./assets/fonts/Onest-Bold.ttf"),
-    Orbitron: require("./assets/fonts/Orbitron.ttf"), // Load Orbitron just in case, but we'll switch to Inter
+    Orbitron: require("./assets/fonts/Orbitron.ttf"),
   });
 
-  // DEBUG LOG
-  useEffect(() => {
-    console.log(
-      "[AppRoot] Current UserData state:",
-      JSON.stringify(userData, null, 2),
-    );
-    console.log("[AppRoot] ShowLogin state:", showLogin);
-    console.log("[AppRoot] IsLoading state:", isLoading);
-  }, [userData, showLogin, isLoading]);
   const [error, setError] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
-  const isOfflineRef = React.useRef(false); // Ref to avoid stale closure
+  const isOfflineRef = React.useRef(false);
+  const offlineFade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Request App Tracking Transparency permission on iOS
-    if (Platform.OS === 'ios') {
-      requestTrackingPermissionsAsync().catch(() => {});
+    Animated.timing(offlineFade, {
+      toValue: isOffline ? 1 : 0,
+      duration: 300, // 300ms smooth fade
+      useNativeDriver: true,
+    }).start();
+  }, [isOffline]);
+
+  const attRequested = useRef(false);
+  useEffect(() => {
+    if (!isLoading && fontsLoaded && !attRequested.current) {
+      attRequested.current = true;
+      if (Platform.OS === 'ios') {
+        setTimeout(() => {
+          requestTrackingPermissionsAsync().catch((err) => {
+            console.warn('[AppRoot] ATT request failed:', err);
+          });
+        }, 500);
+      }
     }
+  }, [isLoading, fontsLoaded]);
 
-    // Initialize TikTok SDK on app start
+  useEffect(() => {
     initTikTok();
-
-    // Track app session for review prompt
     trackAppSession();
-
-    // ALWAYS load user data from local storage first, regardless of network
-    // This is the critical fix for iOS where NetInfo returns null initially
     checkUserStatus();
 
-    // Subscribe to network state updates
     const unsubscribe = NetInfo.addEventListener((state) => {
-      // iOS: isInternetReachable can be null initially — treat null as "online" (optimistic)
-      const nowOffline =
-        state.isConnected === false || state.isInternetReachable === false;
+      const nowOffline = state.isConnected === false || state.isInternetReachable === false;
       const wasOffline = isOfflineRef.current;
       isOfflineRef.current = nowOffline;
       setIsOffline(nowOffline);
 
-      console.log("[AppRoot] Network changed:", {
-        connected: state.isConnected,
-        reachable: state.isInternetReachable,
-        wasOffline,
-        nowOffline,
-      });
-
-      // If we just came back online, re-sync
       if (wasOffline && !nowOffline) {
-        console.log("[AppRoot] Back online, re-checking user status...");
         checkUserStatus();
       }
     });
@@ -216,38 +201,28 @@ export default function AppRoot() {
 
   const checkUserStatus = async () => {
     try {
-      console.log("[AppRoot] Checking user status...");
       const onboardingDone = await isOnboardingComplete();
-      console.log("[AppRoot] Onboarding done:", onboardingDone);
       const user = await getUserData();
-      console.log("[AppRoot] User data:", user);
 
       if (!onboardingDone || !user) {
         setShowLogin(true);
       } else {
-        // user exists locally
-        // Try to sync with remote to get latest points (if online)
         try {
           if (user.hasAccount) {
-            console.log("[AppRoot] Syncing with remote on startup...");
             const latestUser = await syncWithRemote(user.nick);
             const resolvedUser = latestUser || user;
             setUserData(resolvedUser);
-            // Identify returning user to TikTok
             identifyUser(resolvedUser.nick, resolvedUser.nick);
           } else {
-            // Guest -> just use local
             setUserData(user);
             identifyUser(user.nick, user.nick);
           }
         } catch (syncErr) {
-          console.warn("[AppRoot] Startup sync failed, using local:", syncErr);
           setUserData(user);
         }
         setShowLogin(false);
       }
     } catch (err) {
-      console.error("[AppRoot] Error checking user status:", err);
       setError(String(err));
       setShowLogin(true);
     } finally {
@@ -269,21 +244,17 @@ export default function AppRoot() {
 
   const handleLoginComplete = useCallback(async (user: UserData) => {
     try {
-      console.log("[AppRoot] Login complete, user:", user);
       await setOnboardingComplete();
       setUserData(user);
       setShowLogin(false);
-      // TikTok: identify user and track login
       identifyUser(user.nick, user.nick);
       trackLogin();
     } catch (err) {
-      console.error("[AppRoot] Error in handleLoginComplete:", err);
       setError(String(err));
     }
   }, []);
 
   const handleUserDataChange = useCallback((user: UserData) => {
-    console.log("[AppRoot] User data changed:", user);
     setUserData(user);
   }, []);
 
@@ -297,74 +268,74 @@ export default function AppRoot() {
     setShowLogin(true);
   }, []);
 
-  // Offline screen
-  if (isOffline && !isLoading) {
-    return (
-      <SafeAreaProvider>
-        <View style={styles.offlineContainer}>
-          <Text style={styles.offlineIcon}>📡</Text>
-          <Text style={styles.offlineTitle}>Bez připojení</Text>
-          <Text style={styles.offlineText}>
-            Pro používání Astra Radio je potřeba internetové připojení.
-          </Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.retryButton,
-              pressed && styles.retryButtonPressed,
-            ]}
-            onPress={handleRetry}
-          >
-            <Text style={styles.retryButtonText}>Zkusit znovu</Text>
-          </Pressable>
-        </View>
-      </SafeAreaProvider>
-    );
-  }
-
-  // Hide native splash as soon as fonts are ready, then show our animated screen
   useEffect(() => {
     if (fontsLoaded) {
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded]);
 
-  // Wait for both network check (isLoading) and fonts
-  if (isLoading || !fontsLoaded) {
-    return (
-      <SafeAreaProvider>
-        <LoadingScreen />
-      </SafeAreaProvider>
-    );
-  }
+  const renderContent = () => {
+    if (isLoading || !fontsLoaded) {
+      return <LoadingScreen />;
+    }
 
-  if (error) {
-    return (
-      <SafeAreaProvider>
+    if (error) {
+      return (
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>Error: {error}</Text>
         </View>
-      </SafeAreaProvider>
-    );
-  }
+      );
+    }
 
-  if (showLogin) {
     return (
-      <SafeAreaProvider>
-        <LoginScreen onLoginComplete={handleLoginComplete} />
-      </SafeAreaProvider>
+      <>
+        {/* 1. ALWAYS keep the current screen mounted so SDKs don't crash */}
+        {showLogin ? (
+          <LoginScreen onLoginComplete={handleLoginComplete} />
+        ) : (
+          <MainApp
+            userData={userData}
+            onUserDataChange={handleUserDataChange}
+            onRequestLogin={handleRequestLogin}
+            onLogout={handleLogout}
+          />
+        )}
+        
+        {__DEV__ && <DebugOverlay />}
+
+        {/* 2. OVERLAY the offline screen with a smooth fade */}
+        {isOffline && !isLoading && (
+          <Animated.View 
+            style={[
+              StyleSheet.absoluteFill, 
+              styles.offlineContainer, 
+              { zIndex: 9999, opacity: offlineFade } 
+            ]}
+          >
+            <Text style={styles.offlineIcon}>📡</Text>
+            <Text style={styles.offlineTitle}>Bez připojení</Text>
+            <Text style={styles.offlineText}>
+              Pro používání Astra Radio je potřeba internetové připojení.
+            </Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.retryButton,
+                pressed && styles.retryButtonPressed,
+              ]}
+              onPress={handleRetry}
+            >
+              <Text style={styles.retryButtonText}>Zkusit znovu</Text>
+            </Pressable>
+          </Animated.View>
+        )}
+      </>
     );
-  }
+  };
 
   return (
-    <>
-      <MainApp
-        userData={userData}
-        onUserDataChange={handleUserDataChange}
-        onRequestLogin={handleRequestLogin}
-        onLogout={handleLogout}
-      />
-      {__DEV__ && <DebugOverlay />}
-    </>
+    <SafeAreaProvider style={{ flex: 1, backgroundColor: '#0B1014' }}>
+      {renderContent()}
+    </SafeAreaProvider>
   );
 }
 

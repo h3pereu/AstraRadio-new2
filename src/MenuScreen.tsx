@@ -6,13 +6,12 @@ import {
   Pressable,
   Linking,
   Alert,
-  ScrollView,
   TextInput,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { launchTestSuite, validateIntegration } from "./adService";
 import { clearAllData } from "./storage";
 import { deleteAccount } from "./api";
 import { UserData } from "./types";
@@ -108,6 +107,127 @@ const HeartIcon = () => (
     />
   </Svg>
 );
+
+const RankIcon = ({
+  tierId,
+  size = 24,
+}: {
+  tierId?: string;
+  size?: number;
+}) => {
+  switch (tierId) {
+    case "badge_10h":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M4 13c2-2 4-2 6 0s4 2 6 0 4-2 4-2"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case "badge_50h":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M4 10c2-2 4-2 6 0s4 2 6 0 4-2 4-2"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+          <Path
+            d="M4 14c2-2 4-2 6 0s4 2 6 0 4-2 4-2"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case "badge_100h":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M10 5v10.5a2.5 2.5 0 11-2-2.45V7l8-2v8.5a2.5 2.5 0 11-2-2.45V5"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case "badge_150h":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M12 15a4 4 0 004-4V8a4 4 0 10-8 0v3a4 4 0 004 4zm0 0v4m-3 0h6"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case "badge_200h":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M4 13v-1a8 8 0 0116 0v1m-2 0v3a2 2 0 01-2 2h-1m-6 0H8a2 2 0 01-2-2v-3m6 5v2"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case "badge_300h":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M6 18V9m6 9V5m6 13v-7"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+    case "badge_400h":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M4 7l4 4 4-5 4 5 4-4-2 11H6L4 7z"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    case "badge_500h":
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M12 4l2.4 4.9 5.4.8-3.9 3.8.9 5.3-4.8-2.6-4.8 2.6.9-5.3-3.9-3.8 5.4-.8L12 4z"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </Svg>
+      );
+    default:
+      return (
+        <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+          <Path
+            d="M12 5v14m-7-7h14"
+            stroke={colors.accent}
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </Svg>
+      );
+  }
+};
 
 // ... Keep your helper functions (handleContact, etc.) ...
 
@@ -221,14 +341,13 @@ export default function MenuScreen({
       ],
     );
   };
-  const handleTestSuite = async () => {
-    await launchTestSuite();
-  };
-
   const totalMinutes = Math.max(0, userData.totalListeningMinutes || 0);
   const totalHours = Math.floor(totalMinutes / 60);
   const totalMins = totalMinutes % 60;
   const isGuest = !userData.hasAccount;
+  const { height } = useWindowDimensions();
+  const isCompact = height < 760;
+  const footerClearance = isCompact ? 108 : 116;
 
   // Badge progress
   const activeTier = getActiveBadgeTier(totalMinutes);
@@ -239,187 +358,207 @@ export default function MenuScreen({
     <View style={styles.container}>
       {/* 1. Transparent Header Area - REMOVED "MENU" TITLE per user request */}
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.mainContent}>
-          {/* 2. Glassy Account Card */}
-          <View style={styles.accountCard}>
-            <View style={styles.accountHeader}>
-              <Text style={styles.accountTitle}>Můj Účet</Text>
-              <Text style={styles.accountStatus}>
-                {isGuest ? "Host" : "Člen"}
-              </Text>
-            </View>
-
-            <Text style={styles.accountNick}>@{userData?.nick ?? "User"}</Text>
-
-            <View style={styles.accountStats}>
-              <View style={styles.accountStat}>
-                <Text style={styles.accountStatLabel}>Poslechnuto</Text>
-                <Text style={styles.accountStatValue}>
-                  {totalHours}h {totalMins}m
-                </Text>
-              </View>
-              <View style={styles.accountStat}>
-                <Text style={styles.accountStatLabel}>Body</Text>
-                <Text style={styles.accountStatValue}>
-                  {userData?.points ?? 0}
-                </Text>
-              </View>
-              <View style={styles.accountStat}>
-                <Text style={styles.accountStatLabel}>Multiplikátor</Text>
-                <Text style={styles.accountStatValue}>{multiplier.toFixed(2)}×</Text>
-              </View>
-            </View>
-
-            {/* Badge row */}
-            {activeTier ? (
-              <View style={styles.badgeRow}>
-                <Text style={styles.badgeIcon}>{activeTier.icon}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.badgeTitle}>{activeTier.title}</Text>
-                  {nextTier ? (
-                    <Text style={styles.badgeNext}>
-                      Další odznak za {Math.ceil(nextTier.hoursRequired - totalMinutes / 60)}h poslechu
-                    </Text>
-                  ) : (
-                    <Text style={styles.badgeNext}>Maximální úroveň! 🏆</Text>
-                  )}
-                </View>
-              </View>
-            ) : nextTier ? (
-              <View style={styles.badgeRow}>
-                <Text style={styles.badgeIcon}>🎵</Text>
-                <Text style={styles.badgeNext}>
-                  První odznak za {Math.ceil(nextTier.hoursRequired - totalMinutes / 60)}h poslechu
-                </Text>
-              </View>
-            ) : null}
-
-            {isGuest && (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.accountCta,
-                  pressed && styles.pressed,
-                ]}
-                onPress={handleAccountAccess}
-              >
-                <Text style={styles.accountCtaText}>
-                  Přihlášení / Registrace
-                </Text>
-              </Pressable>
-            )}
+      <View style={styles.accountFixedArea}>
+        {/* 2. Glassy Account Card */}
+        <View style={[styles.accountCard, isCompact && styles.accountCardCompact]}>
+          <View style={styles.accountHeader}>
+            <Text style={styles.accountTitle}>Můj Účet</Text>
+            <Text style={styles.accountStatus}>{isGuest ? "Host" : "Člen"}</Text>
           </View>
 
-          {/* 3. Donate Button - Hidden on iOS (Apple IAP policy 3.1.1) */}
-          {Platform.OS !== 'ios' && <Pressable
-            style={({ pressed }) => [
-              styles.donateButton,
-              pressed && styles.donateButtonPressed,
-            ]}
-            onPress={handleDonate}
-          >
-            <View style={styles.menuButtonIcon}>
-              <HeartIcon />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.donateText}>Podpořte Astra Radio</Text>
-              <Text style={styles.donateSubtext}>
-                Pomozte nám růst – každý příspěvek se počítá ❤️
+          <Text style={[styles.accountNick, isCompact && styles.accountNickCompact]}>
+            @{userData?.nick ?? "User"}
+          </Text>
+
+          <View style={styles.accountStats}>
+            <View style={[styles.accountStat, isCompact && styles.accountStatCompact]}>
+              <Text style={styles.accountStatLabel}>Poslechnuto</Text>
+              <Text style={styles.accountStatValue}>
+                {totalHours}h {totalMins}m
               </Text>
             </View>
-            <ArrowIcon />
-          </Pressable>}
+            <View style={[styles.accountStat, isCompact && styles.accountStatCompact]}>
+              <Text style={styles.accountStatLabel}>Body</Text>
+              <Text style={styles.accountStatValue}>{userData?.points ?? 0}</Text>
+            </View>
+            <View style={[styles.accountStat, isCompact && styles.accountStatCompact]}>
+              <Text style={styles.accountStatLabel}>Multiplikátor</Text>
+              <Text style={styles.accountStatValue}>{multiplier.toFixed(2)}×</Text>
+            </View>
+          </View>
 
-          {/* 4. Glassy Menu Buttons */}
-          <View style={styles.menuGroup}>
-            <MenuButton
+          {/* Badge row */}
+          {activeTier ? (
+            <View style={[styles.badgeRow, isCompact && styles.badgeRowCompact]}>
+              <View style={[styles.badgeIcon, isCompact && styles.badgeIconCompact]}>
+                <RankIcon tierId={activeTier.id} size={isCompact ? 20 : 24} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.badgeTitle}>{activeTier.title}</Text>
+                {nextTier ? (
+                  <Text style={[styles.badgeNext, isCompact && styles.badgeNextCompact]}>
+                    Další odznak za {Math.ceil(nextTier.hoursRequired - totalMinutes / 60)}h poslechu
+                  </Text>
+                ) : (
+                  <Text style={[styles.badgeNext, isCompact && styles.badgeNextCompact]}>
+                    Maximální úroveň
+                  </Text>
+                )}
+              </View>
+            </View>
+          ) : nextTier ? (
+            <View style={[styles.badgeRow, isCompact && styles.badgeRowCompact]}>
+              <View style={[styles.badgeIcon, isCompact && styles.badgeIconCompact]}>
+                <RankIcon tierId={nextTier.id} size={isCompact ? 20 : 24} />
+              </View>
+              <Text style={[styles.badgeNext, isCompact && styles.badgeNextCompact]}>
+                První odznak za {Math.ceil(nextTier.hoursRequired - totalMinutes / 60)}h poslechu
+              </Text>
+            </View>
+          ) : null}
+
+          {isGuest && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.accountCta,
+                isCompact && styles.accountCtaCompact,
+                pressed && styles.pressed,
+              ]}
+              onPress={handleAccountAccess}
+            >
+              <Text style={styles.accountCtaText}>Přihlášení / Registrace</Text>
+            </Pressable>
+          )}
+        </View>
+      </View>
+
+      <View
+        style={[
+          styles.actionsArea,
+          !isGuest && styles.actionsAreaWithFooter,
+          !isGuest && { paddingBottom: footerClearance },
+        ]}
+      >
+        <View style={styles.primaryActions}>
+          {/* 3. Donate Button - Hidden on iOS (Apple IAP policy 3.1.1) */}
+          {Platform.OS !== "ios" && (
+            <Pressable
+              style={({ pressed }) => [
+                styles.donateButton,
+                isCompact && styles.donateButtonCompact,
+                pressed && styles.donateButtonPressed,
+              ]}
+              onPress={handleDonate}
+            >
+              <View style={styles.menuButtonIcon}>
+                <HeartIcon />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.donateText, isCompact && styles.donateTextCompact]}>
+                  Podpořte Astra Radio
+                </Text>
+                {!isCompact && (
+                  <Text style={styles.donateSubtext}>
+                    Pomozte nám růst – každý příspěvek se počítá ❤️
+                  </Text>
+                )}
+              </View>
+              <ArrowIcon />
+            </Pressable>
+          )}
+
+          {/* 4. Main actions without scrolling */}
+          <View style={styles.menuGrid}>
+            <MenuTile
               icon={<ShopIcon />}
               label="Obchod"
               onPress={() => {
                 onClose();
                 onNavigateToShop();
               }}
-              isFirst
+              compact={isCompact}
             />
-            <MenuButton
+            <MenuTile
               icon={<EmailIcon />}
               label="Kontakt"
               onPress={handleContact}
+              compact={isCompact}
             />
-            <MenuButton
+            <MenuTile
               icon={<DocumentIcon />}
               label="Zásady ochrany údajů"
               onPress={handlePrivacyPolicy}
+              compact={isCompact}
             />
-            <MenuButton
+            <MenuTile
               icon={<DocumentIcon />}
               label="Podmínky použití"
               onPress={handleTermsOfService}
+              compact={isCompact}
             />
-
-            {__DEV__ && (
-              <MenuButton
-                icon={<DocumentIcon />}
-                label="Test Ads"
-                onPress={handleTestSuite}
-              />
-            )}
           </View>
         </View>
 
         {/* Logout & Delete Account - Only for logged-in users */}
         {!isGuest && (
-          <View>
-            <Pressable
-              style={({ pressed }) => [
-                styles.deleteAccountButton,
-                pressed && styles.pressed,
-              ]}
+          <View style={styles.accountActionsRow}>
+            <SecondaryActionButton
+              icon={<TrashIcon />}
+              label="Smazat účet"
               onPress={handleDeleteAccount}
-            >
-              <View style={styles.menuButtonIcon}>
-                <TrashIcon />
-              </View>
-              <Text style={styles.deleteAccountText}>Smazat účet</Text>
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.logoutButton,
-                pressed && styles.pressed,
-              ]}
+              compact={isCompact}
+            />
+            <SecondaryActionButton
+              icon={<LogoutIcon />}
+              label="Odhlásit se"
               onPress={handleLogout}
-            >
-              <View style={styles.menuButtonIcon}>
-                <LogoutIcon />
-              </View>
-              <Text style={styles.logoutText}>Odhlásit se</Text>
-            </Pressable>
+              compact={isCompact}
+            />
           </View>
         )}
-      </ScrollView>
+      </View>
     </View>
   );
 }
 
-// Helper Component for Buttons
-function MenuButton({ icon, label, onPress, isFirst }: any) {
+// Helper Component for Main Tiles
+function MenuTile({ icon, label, onPress, compact }: any) {
   return (
     <Pressable
       style={({ pressed }) => [
-        styles.menuButton,
-        isFirst && { marginTop: 0 },
-        pressed && styles.menuButtonPressed,
+        styles.menuTile,
+        compact && styles.menuTileCompact,
+        pressed && styles.menuTilePressed,
       ]}
       onPress={onPress}
     >
-      <View style={styles.menuButtonIcon}>{icon}</View>
-      <Text style={styles.menuButtonText}>{label}</Text>
-      <ArrowIcon />
+      <View style={styles.menuTileHeader}>
+        <View style={styles.menuTileIcon}>{icon}</View>
+        <View style={styles.menuTileArrow}>
+          <ArrowIcon />
+        </View>
+      </View>
+      <Text style={[styles.menuTileText, compact && styles.menuTileTextCompact]} numberOfLines={3}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function SecondaryActionButton({ icon, label, onPress, compact }: any) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.secondaryActionButton,
+        compact && styles.secondaryActionButtonCompact,
+        pressed && styles.pressed,
+      ]}
+      onPress={onPress}
+    >
+      <View style={styles.secondaryActionIcon}>{icon}</View>
+      <Text style={[styles.secondaryActionText, compact && styles.secondaryActionTextCompact]}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -447,17 +586,19 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
-  scrollView: {
-    flex: 1,
+  accountFixedArea: {
     paddingHorizontal: 20,
   },
-  content: {
-    paddingTop: 20, // Added top padding since header is gone
-    paddingBottom: 120, // Clear the absolute TabBar (61px + 44px bottom)
-    justifyContent: "space-between", // Distribute content
+  actionsArea: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 24,
   },
-  mainContent: {
-    // Container for Account + Menu Buttons to keep them together at top
+  actionsAreaWithFooter: {
+    justifyContent: "space-between",
+  },
+  primaryActions: {
+    flexShrink: 1,
   },
   // Account Card Style (Glass)
   accountCard: {
@@ -468,6 +609,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  accountCardCompact: {
+    marginTop: 14,
+    marginBottom: 14,
+    padding: 16,
   },
   accountHeader: {
     flexDirection: "row",
@@ -491,6 +637,10 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 16,
   },
+  accountNickCompact: {
+    fontSize: 20,
+    marginBottom: 12,
+  },
   accountStats: {
     flexDirection: "row",
     // gap: 24, // Removed for iOS compatibility
@@ -498,6 +648,9 @@ const styles = StyleSheet.create({
   },
   accountStat: {
     marginRight: 24, // Replaces gap: 24 for iOS compatibility
+  },
+  accountStatCompact: {
+    marginRight: 16,
   },
   accountStatLabel: {
     color: colors.textMuted,
@@ -521,9 +674,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0, 229, 255, 0.12)",
   },
+  badgeRowCompact: {
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
   badgeIcon: {
-    fontSize: 24,
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 10,
+  },
+  badgeIconCompact: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
   },
   badgeTitle: {
     color: colors.accent,
@@ -535,6 +701,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 1,
   },
+  badgeNextCompact: {
+    fontSize: 10,
+  },
   accountCta: {
     marginTop: 16,
     backgroundColor: "rgba(0, 229, 255, 0.1)",
@@ -544,28 +713,69 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(0, 229, 255, 0.3)",
   },
+  accountCtaCompact: {
+    marginTop: 12,
+    paddingVertical: 8,
+  },
   accountCtaText: {
     color: colors.accent,
     fontSize: 13,
     fontWeight: "600",
   },
-  // Menu Buttons Group
-  menuGroup: {
-    // gap: 12, // Removed for iOS compatibility - using marginTop on children instead
-  },
-  menuButton: {
+  menuGrid: {
     flexDirection: "row",
-    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    marginTop: 2,
+  },
+  menuTile: {
+    width: "48.5%",
     backgroundColor: colors.surfaceGlass,
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: colors.border,
-    marginTop: 12, // Replaces gap: 12 from menuGroup for iOS compatibility
+    marginTop: 10,
+    minHeight: 92,
+    justifyContent: "space-between",
   },
-  menuButtonPressed: {
+  menuTileCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 8,
+    minHeight: 84,
+  },
+  menuTilePressed: {
     backgroundColor: "rgba(0, 229, 255, 0.1)",
     transform: [{ scale: 0.99 }],
+  },
+  menuTileHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  menuTileIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuTileArrow: {
+    marginLeft: 8,
+  },
+  menuTileText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 18,
+    marginTop: 8,
+  },
+  menuTileTextCompact: {
+    fontSize: 13,
+    lineHeight: 16,
+    marginTop: 6,
   },
   menuButtonIcon: {
     width: 36,
@@ -575,42 +785,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 14,
   },
-  menuButtonText: {
-    flex: 1,
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "500",
+  accountActionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+    paddingBottom: 2,
   },
-  logoutButton: {
+  secondaryActionButton: {
+    width: "48.5%",
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 10, // Margin from Menu Group
-    marginBottom: 110, // Ensure it clears the TabBar (61px + 44px bottom)
-    padding: 16,
+    justifyContent: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 12,
     borderRadius: 18,
     backgroundColor: "rgba(255, 107, 107, 0.1)",
     borderWidth: 1,
     borderColor: "rgba(255, 107, 107, 0.3)",
   },
-  logoutText: {
+  secondaryActionButtonCompact: {
+    paddingVertical: 10,
+  },
+  secondaryActionIcon: {
+    marginRight: 8,
+  },
+  secondaryActionText: {
     color: "#ff6b6b",
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
   },
-  deleteAccountButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 20,
-    padding: 16,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 107, 107, 0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(255, 107, 107, 0.15)",
-  },
-  deleteAccountText: {
-    color: "#ff6b6b",
-    fontSize: 15,
-    fontWeight: "500",
+  secondaryActionTextCompact: {
+    fontSize: 13,
   },
   pressed: {
     opacity: 0.8,
@@ -623,7 +828,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 1,
     borderColor: "rgba(255, 107, 157, 0.3)",
-    marginBottom: 16,
+    marginBottom: 8,
+  },
+  donateButtonCompact: {
+    paddingVertical: 12,
   },
   donateButtonPressed: {
     backgroundColor: "rgba(255, 107, 157, 0.2)",
@@ -633,6 +841,9 @@ const styles = StyleSheet.create({
     color: "#ff6b9d",
     fontSize: 15,
     fontWeight: "600",
+  },
+  donateTextCompact: {
+    fontSize: 14,
   },
   donateSubtext: {
     color: "rgba(255, 107, 157, 0.7)",

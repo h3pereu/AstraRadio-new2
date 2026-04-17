@@ -1,0 +1,5 @@
+{
+  "enabledPlugins": {
+    "cache-components@nextjs": true
+  }
+}

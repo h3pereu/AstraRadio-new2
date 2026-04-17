@@ -20,15 +20,14 @@ const StarryBackground: React.FC = () => {
             return;
         }
 
-        // Generate random stars
         const newStars = Array.from({ length: STAR_COUNT }, () => {
             const opacity = new Animated.Value(Math.random() * 0.5 + 0.2);
-            const duration = Math.random() * 3000 + 2000; // 2-5 seconds
+            const duration = Math.random() * 3000 + 2000;
 
             return {
                 x: Math.random() * width,
                 y: Math.random() * height,
-                size: Math.random() * 2 + 1, // 1-3px
+                size: Math.random() * 2 + 1,
                 opacity,
                 duration,
             };
@@ -36,7 +35,6 @@ const StarryBackground: React.FC = () => {
 
         setStars(newStars);
 
-        // Animate stars (twinkling effect)
         newStars.forEach((star) => {
             const twinkle = () => {
                 Animated.sequence([
@@ -80,7 +78,7 @@ const StarryBackground: React.FC = () => {
 const styles = StyleSheet.create({
     container: {
         ...StyleSheet.absoluteFillObject,
-        zIndex: 0,
+        // Removed zIndex entirely to prevent iPad Fabric clipping
     },
     star: {
         position: 'absolute',

@@ -326,8 +326,6 @@ export default function ShopScreen({
   );
 
   const adFreeRewards = SHOP_REWARDS.filter((r) => r.type === "ad_free");
-  const merchRewards = SHOP_REWARDS.filter((r) => r.type === "merch");
-  const badgeRewards = SHOP_REWARDS.filter((r) => r.type === "badge");
 
   return (
     <ScrollView
@@ -494,41 +492,6 @@ export default function ShopScreen({
         </View>
       </View>
 
-      {/* Badges Section */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Image
-            source={require("../assets/award.png")}
-            style={styles.sectionIcon}
-            resizeMode="contain"
-          />
-          <Text style={styles.sectionTitle}>Odznaky</Text>
-        </View>
-        <View style={styles.badgesGrid}>
-          {badgeRewards.map((reward) => {
-            const { can } = canPurchase(reward);
-            return (
-              <Pressable
-                key={reward.id}
-                style={({ pressed }) => [
-                  styles.badgeCard,
-                  !can && styles.badgeCardDisabled,
-                  pressed && can && styles.rewardCardPressed,
-                ]}
-                onPress={() => handlePurchase(reward)}
-                disabled={!can || loading}
-              >
-                <Text style={styles.badgeEmoji}>🏅</Text>
-                <Text style={styles.badgeTitle}>{reward.title}</Text>
-                <Text style={styles.badgePrice}>
-                  {formatPoints(reward.cost)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      </View>
-
       {/* Merch Order Modal */}
       <Modal
         visible={merchModalVisible}
@@ -625,7 +588,7 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 16,
     paddingTop: 20,
-    paddingBottom: 100,
+    paddingBottom: 24,
   },
   header: {
     flexDirection: "row",
@@ -883,40 +846,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 10,
     fontFamily: fonts.body,
-  },
-  badgesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginHorizontal: -5,
-  },
-  badgeCard: {
-    width: "31%",
-    backgroundColor: colors.surface,
-    borderRadius: 14,
-    padding: 14,
-    alignItems: "center",
-    margin: "1%",
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  badgeCardDisabled: {
-    opacity: 0.5,
-  },
-  badgeEmoji: {
-    fontSize: 28,
-    marginBottom: 6,
-  },
-  badgeTitle: {
-    color: colors.textPrimary,
-    fontSize: 11,
-    fontFamily: fonts.bodySemi,
-    textAlign: "center",
-  },
-  badgePrice: {
-    color: colors.accent,
-    fontSize: 12,
-    fontFamily: fonts.bodyMedium,
-    marginTop: 4,
   },
   modalOverlay: {
     flex: 1,
